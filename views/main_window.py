@@ -184,9 +184,9 @@ class MainWindow(QMainWindow):
         # 文件菜单
         file_menu = menubar.addMenu("文件")
         
-        refresh_action = QAction("刷新", self)
+        refresh_action = QAction("刷新当前页面", self)
         refresh_action.setShortcut("F5")
-        refresh_action.triggered.connect(self.refresh_all_data)
+        refresh_action.triggered.connect(self.refresh_current_tab)
         file_menu.addAction(refresh_action)
         
         file_menu.addSeparator()
@@ -232,24 +232,37 @@ class MainWindow(QMainWindow):
     
     def start_monitoring(self):
         """开始监控"""
-        # 启动系统监控
+        # 启动系统监控（自动刷新）
         self.system_controller.start_monitoring()
         
-        # 定时刷新其他信息
+        # 定时刷新硬件信息（仅硬件信息自动刷新）
         self.refresh_timer = QTimer()
-        self.refresh_timer.timeout.connect(self.refresh_all_data)
-        self.refresh_timer.start(5000)  # 每5秒刷新一次
+        self.refresh_timer.timeout.connect(self.refresh_hardware)
+        self.refresh_timer.start(10000)  # 每10秒刷新一次硬件信息
         
-        # 延迟加载数据，分批加载避免卡顿
+        # 初始加载数据（仅加载一次）
         QTimer.singleShot(200, self.refresh_hardware)
-        QTimer.singleShot(500, self.refresh_processes)
-        QTimer.singleShot(1000, self.refresh_network)
+        QTimer.singleShot(500, self.refresh_processes_once)
+        QTimer.singleShot(1000, self.refresh_network_once)
     
-    def refresh_all_data(self):
-        """刷新所有数据"""
-        self.refresh_processes()
-        self.refresh_network()
-        self.refresh_hardware()
+    def refresh_processes_once(self):
+        """初始加载进程列表（仅一次）"""
+        self.process_controller.get_processes(force_refresh=True)
+    
+    def refresh_network_once(self):
+        """初始加载网络连接（仅一次）"""
+        self.network_controller.get_connections(force_refresh=True)
+    
+    def refresh_current_tab(self):
+        """刷新当前标签页"""
+        current_index = self.tab_widget.currentIndex()
+        
+        if current_index == 0:  # 系统信息
+            self.refresh_hardware()
+        elif current_index == 1:  # 进程管理
+            self.refresh_processes()
+        elif current_index == 2:  # 网络监控
+            self.refresh_network()
     
     def refresh_processes(self):
         """刷新进程列表"""

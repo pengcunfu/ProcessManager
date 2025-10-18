@@ -1,6 +1,6 @@
 # 系统监控与进程管理工具 v3.0 (MVC架构)
 
-一个使用 PySide6 和 Fluent-Widgets 开发的现代化系统监控和进程管理工具，采用标准MVC架构设计。
+一个使用原生 PySide6 开发的现代化系统监控和进程管理工具，采用标准MVC架构设计。
 
 ## ✨ 主要特性
 
@@ -28,10 +28,10 @@
 - 关联进程PID
 
 ### 🎨 现代化界面
-- 基于Fluent Design设计风格
+- 原生PySide6界面设计
+- 简洁清爽的UI风格
 - 响应式布局
-- 自动/手动主题切换
-- 流畅的动画效果
+- 标签页导航
 
 ## 📁 项目结构（MVC架构）
 
@@ -154,8 +154,7 @@ python views/main_window.py
 
 ## 📋 技术栈
 
-- **GUI框架**: PySide6 (Qt6)
-- **UI库**: PySide6-Fluent-Widgets
+- **GUI框架**: PySide6 (Qt6) - 原生界面
 - **系统监控**: psutil
 - **架构**: MVC
 - **Python版本**: 3.8+

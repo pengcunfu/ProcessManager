@@ -1,180 +1,138 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Fluent UI组件
-使用PySide6-Fluent-Widgets创建现代化界面组件
+UI组件
+使用原生PySide6创建界面组件
 """
 
-from typing import List, Optional, Dict
+from typing import List
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, 
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
-    QSplitter, QTextEdit, QFrame
+    QGroupBox, QPushButton, QLineEdit, QComboBox, QProgressBar,
+    QTextEdit
 )
-from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QFont, QPixmap, QPainter, QColor
-
-from qfluentwidgets import (
-    FluentIcon as FIF, 
-    CardWidget, 
-    HeaderCardWidget,
-    ElevatedCardWidget,
-    SimpleCardWidget,
-    PushButton,
-    PrimaryPushButton,
-    ToolButton,
-    SearchLineEdit,
-    ComboBox,
-    ProgressBar,
-    InfoBar,
-    InfoBarPosition,
-    TableWidget,
-    TextEdit,
-    BodyLabel,
-    StrongBodyLabel,
-    CaptionLabel,
-    TitleLabel,
-    SubtitleLabel,
-    LargeTitleLabel,
-    DisplayLabel,
-    ScrollArea,
-    FlowLayout,
-    ProgressRing,
-    IndeterminateProgressRing,
-    Pivot,
-    PivotItem,
-    SplitPushButton,
-    RoundMenu,
-    Action,
-    MenuAnimationType,
-    Theme,
-    setTheme,
-    isDarkTheme,
-    qconfig
-)
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont
 
 from models import SystemInfo, ProcessInfo, NetworkConnection, format_bytes, format_frequency
 
 
-class SystemOverviewCard(ElevatedCardWidget):
+class SystemOverviewCard(QGroupBox):
     """系统概览卡片"""
     
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setFixedHeight(200)
+        super().__init__("系统概览", parent)
+        self.setFixedHeight(180)
         self.init_ui()
     
     def init_ui(self):
         """初始化界面"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        
-        # 标题
-        title = SubtitleLabel("系统概览")
-        title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
         
         # 资源使用情况网格
         grid_layout = QGridLayout()
         
-        # CPU卡片
-        self.cpu_card = self._create_resource_card("CPU", "0%", FIF.HOME)
-        self.cpu_progress = ProgressBar()
-        self.cpu_progress.setFixedHeight(8)
+        # CPU
+        cpu_label = QLabel("CPU使用率")
+        self.cpu_value = QLabel("0%")
+        self.cpu_value.setStyleSheet("font-weight: bold; font-size: 14pt;")
+        self.cpu_progress = QProgressBar()
+        self.cpu_progress.setFixedHeight(10)
         
-        cpu_layout = QVBoxLayout()
-        cpu_layout.addWidget(self.cpu_card)
-        cpu_layout.addWidget(self.cpu_progress)
+        grid_layout.addWidget(cpu_label, 0, 0)
+        grid_layout.addWidget(self.cpu_value, 0, 1, Qt.AlignRight)
+        grid_layout.addWidget(self.cpu_progress, 1, 0, 1, 2)
         
-        # 内存卡片
-        self.memory_card = self._create_resource_card("内存", "0%", FIF.HOME)
-        self.memory_progress = ProgressBar()
-        self.memory_progress.setFixedHeight(8)
+        # 内存
+        memory_label = QLabel("内存使用率")
+        self.memory_value = QLabel("0%")
+        self.memory_value.setStyleSheet("font-weight: bold; font-size: 14pt;")
+        self.memory_progress = QProgressBar()
+        self.memory_progress.setFixedHeight(10)
         
-        memory_layout = QVBoxLayout()
-        memory_layout.addWidget(self.memory_card)
-        memory_layout.addWidget(self.memory_progress)
+        grid_layout.addWidget(memory_label, 2, 0)
+        grid_layout.addWidget(self.memory_value, 2, 1, Qt.AlignRight)
+        grid_layout.addWidget(self.memory_progress, 3, 0, 1, 2)
         
-        # 磁盘卡片
-        self.disk_card = self._create_resource_card("磁盘", "0%", FIF.HOME)
-        self.disk_progress = ProgressBar()
-        self.disk_progress.setFixedHeight(8)
+        # 磁盘
+        disk_label = QLabel("磁盘使用率")
+        self.disk_value = QLabel("0%")
+        self.disk_value.setStyleSheet("font-weight: bold; font-size: 14pt;")
+        self.disk_progress = QProgressBar()
+        self.disk_progress.setFixedHeight(10)
         
-        disk_layout = QVBoxLayout()
-        disk_layout.addWidget(self.disk_card)
-        disk_layout.addWidget(self.disk_progress)
-        
-        # 添加到网格
-        grid_layout.addLayout(cpu_layout, 0, 0)
-        grid_layout.addLayout(memory_layout, 0, 1)
-        grid_layout.addLayout(disk_layout, 0, 2)
+        grid_layout.addWidget(disk_label, 4, 0)
+        grid_layout.addWidget(self.disk_value, 4, 1, Qt.AlignRight)
+        grid_layout.addWidget(self.disk_progress, 5, 0, 1, 2)
         
         layout.addLayout(grid_layout)
     
-    def _create_resource_card(self, title: str, value: str, icon) -> QWidget:
-        """创建资源使用卡片"""
-        card = SimpleCardWidget()
-        card.setFixedHeight(60)
-        
-        layout = QHBoxLayout(card)
-        layout.setContentsMargins(15, 10, 15, 10)
-        
-        # 图标
-        icon_label = QLabel()
-        icon_pixmap = icon.icon(color=QColor(0, 120, 215)).pixmap(24, 24)
-        icon_label.setPixmap(icon_pixmap)
-        icon_label.setFixedSize(24, 24)
-        
-        # 文本信息
-        text_layout = QVBoxLayout()
-        text_layout.setSpacing(2)
-        
-        title_label = CaptionLabel(title)
-        title_label.setStyleSheet("color: #666666;")
-        
-        self.value_label = StrongBodyLabel(value)
-        
-        text_layout.addWidget(title_label)
-        text_layout.addWidget(self.value_label)
-        
-        layout.addWidget(icon_label)
-        layout.addLayout(text_layout)
-        layout.addStretch()
-        
-        return card
-    
     def update_system_info(self, info: SystemInfo):
         """更新系统信息"""
-        # 更新CPU
+        # CPU
         cpu_percent = int(info.cpu_percent)
+        self.cpu_value.setText(f"{cpu_percent}%")
         self.cpu_progress.setValue(cpu_percent)
-        self.cpu_card.findChild(StrongBodyLabel).setText(f"{cpu_percent}%")
         
-        # 更新内存
+        # 内存
         memory_percent = int(info.memory_percent)
-        self.memory_progress.setValue(memory_percent)
         memory_gb = info.memory_used / (1024**3)
-        total_gb = info.memory_total / (1024**3)
-        self.memory_card.findChild(StrongBodyLabel).setText(f"{memory_percent}% ({memory_gb:.1f}GB)")
+        self.memory_value.setText(f"{memory_percent}% ({memory_gb:.1f}GB)")
+        self.memory_progress.setValue(memory_percent)
         
-        # 更新磁盘
+        # 磁盘
         disk_percent = int(info.disk_percent)
-        self.disk_progress.setValue(disk_percent)
         disk_gb = info.disk_used / (1024**3)
-        total_disk_gb = info.disk_total / (1024**3)
-        self.disk_card.findChild(StrongBodyLabel).setText(f"{disk_percent}% ({disk_gb:.1f}GB)")
+        self.disk_value.setText(f"{disk_percent}% ({disk_gb:.1f}GB)")
+        self.disk_progress.setValue(disk_percent)
 
 
-class ProcessTableCard(ElevatedCardWidget):
+class SystemStatsCard(QGroupBox):
+    """系统统计卡片"""
+    
+    def __init__(self, parent=None):
+        super().__init__("系统统计", parent)
+        self.setFixedHeight(100)
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化界面"""
+        layout = QGridLayout(self)
+        
+        # 启动时间
+        self.boot_time_label = QLabel("启动时间: --")
+        layout.addWidget(self.boot_time_label, 0, 0)
+        
+        # 运行时间
+        self.uptime_label = QLabel("运行时间: --")
+        layout.addWidget(self.uptime_label, 0, 1)
+        
+        # 进程数
+        self.process_count_label = QLabel("进程数: --")
+        layout.addWidget(self.process_count_label, 1, 0)
+        
+        # CPU核心数
+        self.cpu_count_label = QLabel("CPU核心: --")
+        layout.addWidget(self.cpu_count_label, 1, 1)
+    
+    def update_system_info(self, info: SystemInfo):
+        """更新系统统计信息"""
+        self.boot_time_label.setText(f"启动时间: {info.boot_time}")
+        self.uptime_label.setText(f"运行时间: {info.uptime}")
+        self.process_count_label.setText(f"进程数: {info.process_count}")
+        self.cpu_count_label.setText(f"CPU核心: {info.cpu_count}")
+
+
+class ProcessTableCard(QGroupBox):
     """进程表格卡片"""
     
     # 信号定义
-    process_selected = Signal(int)
-    kill_requested = Signal(int, bool)  # pid, force
     refresh_requested = Signal()
+    kill_requested = Signal(int, bool)  # pid, force
     
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__("进程管理", parent)
         self.current_processes = []
         self.filtered_processes = []
         self.init_ui()
@@ -182,39 +140,35 @@ class ProcessTableCard(ElevatedCardWidget):
     def init_ui(self):
         """初始化界面"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
         
-        # 标题和控制栏
-        header_layout = QHBoxLayout()
-        
-        title = SubtitleLabel("进程管理")
-        header_layout.addWidget(title)
-        
-        header_layout.addStretch()
+        # 控制栏
+        control_layout = QHBoxLayout()
         
         # 搜索框
-        self.search_box = SearchLineEdit()
+        self.search_box = QLineEdit()
         self.search_box.setPlaceholderText("搜索进程...")
         self.search_box.setFixedWidth(200)
         self.search_box.textChanged.connect(self._on_search_changed)
-        header_layout.addWidget(self.search_box)
+        control_layout.addWidget(self.search_box)
         
         # 排序选择
-        self.sort_combo = ComboBox()
+        self.sort_combo = QComboBox()
         self.sort_combo.addItems(["CPU使用率", "内存使用率", "进程名", "PID"])
         self.sort_combo.setFixedWidth(120)
         self.sort_combo.currentTextChanged.connect(self._on_sort_changed)
-        header_layout.addWidget(self.sort_combo)
+        control_layout.addWidget(self.sort_combo)
+        
+        control_layout.addStretch()
         
         # 刷新按钮
-        self.refresh_btn = PrimaryPushButton(FIF.HOME, "刷新")
-        self.refresh_btn.clicked.connect(self.refresh_requested.emit)
-        header_layout.addWidget(self.refresh_btn)
+        refresh_btn = QPushButton("刷新")
+        refresh_btn.clicked.connect(self.refresh_requested.emit)
+        control_layout.addWidget(refresh_btn)
         
-        layout.addLayout(header_layout)
+        layout.addLayout(control_layout)
         
         # 进程表格
-        self.table = TableWidget()
+        self.table = QTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
             "PID", "进程名", "CPU%", "内存%", "内存(MB)", "状态"
@@ -227,16 +181,12 @@ class ProcessTableCard(ElevatedCardWidget):
         
         # 设置列宽
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # PID
-        header.setSectionResizeMode(1, QHeaderView.Stretch)  # 进程名
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # CPU
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # 内存%
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # 内存MB
-        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # 状态
-        
-        # 右键菜单
-        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.table.customContextMenuRequested.connect(self._show_context_menu)
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         
         # 选择变化
         self.table.itemSelectionChanged.connect(self._on_selection_changed)
@@ -246,15 +196,17 @@ class ProcessTableCard(ElevatedCardWidget):
         # 操作按钮栏
         button_layout = QHBoxLayout()
         
-        self.kill_btn = PushButton(FIF.HOME, "结束进程")
+        self.kill_btn = QPushButton("结束进程")
         self.kill_btn.clicked.connect(self._on_kill_clicked)
         self.kill_btn.setEnabled(False)
         
-        self.force_kill_btn = PushButton(FIF.HOME, "强制结束")
+        self.force_kill_btn = QPushButton("强制结束")
+        self.force_kill_btn.setObjectName("dangerButton")
         self.force_kill_btn.clicked.connect(self._on_force_kill_clicked)
         self.force_kill_btn.setEnabled(False)
         
-        self.details_btn = PushButton(FIF.HOME, "详细信息")
+        self.details_btn = QPushButton("详细信息")
+        self.details_btn.setObjectName("secondaryButton")
         self.details_btn.clicked.connect(self._on_details_clicked)
         self.details_btn.setEnabled(False)
         
@@ -264,7 +216,7 @@ class ProcessTableCard(ElevatedCardWidget):
         button_layout.addStretch()
         
         # 进程统计标签
-        self.stats_label = CaptionLabel("进程数: 0")
+        self.stats_label = QLabel("进程数: 0")
         button_layout.addWidget(self.stats_label)
         
         layout.addLayout(button_layout)
@@ -324,14 +276,6 @@ class ProcessTableCard(ElevatedCardWidget):
         self.kill_btn.setEnabled(has_selection)
         self.force_kill_btn.setEnabled(has_selection)
         self.details_btn.setEnabled(has_selection)
-        
-        if has_selection:
-            current_row = self.table.currentRow()
-            if current_row >= 0:
-                pid_item = self.table.item(current_row, 0)
-                if pid_item:
-                    pid = int(pid_item.text())
-                    self.process_selected.emit(pid)
     
     def _on_kill_clicked(self):
         """结束进程"""
@@ -380,94 +324,55 @@ PID: {process.pid}
 CPU使用率: {process.cpu_percent:.1f}%
 内存使用率: {process.memory_percent:.2f}%
 内存使用量: {process.memory_mb:.2f} MB
-线程数: {process.num_threads}
-可执行文件: {process.exe_path or '未知'}
 """
         
-        if process.parent_pid:
-            details += f"父进程PID: {process.parent_pid}\n"
-        
         QMessageBox.information(self, "进程详情", details)
-    
-    def _show_context_menu(self, position):
-        """显示右键菜单"""
-        item = self.table.itemAt(position)
-        if item is None:
-            return
-        
-        menu = RoundMenu(parent=self)
-        
-        # 刷新
-        refresh_action = Action(FIF.HOME, "刷新进程列表")
-        refresh_action.triggered.connect(self.refresh_requested.emit)
-        menu.addAction(refresh_action)
-        
-        menu.addSeparator()
-        
-        # 进程操作
-        details_action = Action(FIF.HOME, "查看详情")
-        details_action.triggered.connect(self._on_details_clicked)
-        menu.addAction(details_action)
-        
-        kill_action = Action(FIF.HOME, "结束进程")
-        kill_action.triggered.connect(self._on_kill_clicked)
-        menu.addAction(kill_action)
-        
-        force_kill_action = Action(FIF.HOME, "强制结束")
-        force_kill_action.triggered.connect(self._on_force_kill_clicked)
-        menu.addAction(force_kill_action)
-        
-        menu.exec(self.table.mapToGlobal(position), aniType=MenuAnimationType.DROP_DOWN)
 
 
-class NetworkTableCard(ElevatedCardWidget):
+class NetworkTableCard(QGroupBox):
     """网络连接表格卡片"""
     
     refresh_requested = Signal()
     
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__("网络连接", parent)
         self.current_connections = []
         self.init_ui()
     
     def init_ui(self):
         """初始化界面"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
         
-        # 标题和控制栏
-        header_layout = QHBoxLayout()
-        
-        title = SubtitleLabel("网络连接")
-        header_layout.addWidget(title)
-        
-        header_layout.addStretch()
+        # 控制栏
+        control_layout = QHBoxLayout()
         
         # 协议过滤
-        self.protocol_combo = ComboBox()
+        control_layout.addWidget(QLabel("协议:"))
+        self.protocol_combo = QComboBox()
         self.protocol_combo.addItems(["全部", "TCP", "UDP"])
         self.protocol_combo.setFixedWidth(100)
         self.protocol_combo.currentTextChanged.connect(self._on_filter_changed)
-        header_layout.addWidget(QLabel("协议:"))
-        header_layout.addWidget(self.protocol_combo)
+        control_layout.addWidget(self.protocol_combo)
         
         # 状态过滤
-        self.status_combo = ComboBox()
+        control_layout.addWidget(QLabel("状态:"))
+        self.status_combo = QComboBox()
         self.status_combo.addItems(["全部", "LISTEN", "ESTABLISHED", "TIME_WAIT"])
         self.status_combo.setFixedWidth(120)
         self.status_combo.currentTextChanged.connect(self._on_filter_changed)
-        header_layout.addWidget(QLabel("状态:"))
-        header_layout.addWidget(self.status_combo)
+        control_layout.addWidget(self.status_combo)
+        
+        control_layout.addStretch()
         
         # 刷新按钮
-        self.refresh_btn = PrimaryPushButton(FIF.HOME, "刷新")
-        self.refresh_btn.clicked.connect(self.refresh_requested.emit)
-        header_layout.addWidget(self.refresh_btn)
+        refresh_btn = QPushButton("刷新")
+        refresh_btn.clicked.connect(self.refresh_requested.emit)
+        control_layout.addWidget(refresh_btn)
         
-        layout.addLayout(header_layout)
+        layout.addLayout(control_layout)
         
         # 网络连接表格
-        self.table = TableWidget()
+        self.table = QTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels([
             "协议", "本地地址", "远程地址", "状态", "PID"
@@ -479,16 +384,16 @@ class NetworkTableCard(ElevatedCardWidget):
         
         # 设置列宽
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # 协议
-        header.setSectionResizeMode(1, QHeaderView.Stretch)  # 本地地址
-        header.setSectionResizeMode(2, QHeaderView.Stretch)  # 远程地址
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # 状态
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # PID
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
         
         layout.addWidget(self.table)
         
         # 统计信息
-        self.stats_label = CaptionLabel("连接数: 0")
+        self.stats_label = QLabel("连接数: 0")
         layout.addWidget(self.stats_label)
     
     def update_connections(self, connections: List[NetworkConnection]):
@@ -532,41 +437,34 @@ class NetworkTableCard(ElevatedCardWidget):
         self._apply_filters()
 
 
-class HardwareInfoCard(ElevatedCardWidget):
+class HardwareInfoCard(QGroupBox):
     """硬件信息卡片"""
     
     refresh_requested = Signal()
     
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__("硬件信息", parent)
         self.init_ui()
     
     def init_ui(self):
         """初始化界面"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
         
-        # 标题和刷新按钮
-        header_layout = QHBoxLayout()
-        
-        title = SubtitleLabel("硬件信息")
-        header_layout.addWidget(title)
-        
-        header_layout.addStretch()
-        
-        self.refresh_btn = PrimaryPushButton(FIF.HOME, "刷新")
-        self.refresh_btn.clicked.connect(self.refresh_requested.emit)
-        header_layout.addWidget(self.refresh_btn)
-        
-        layout.addLayout(header_layout)
+        # 刷新按钮
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        refresh_btn = QPushButton("刷新")
+        refresh_btn.clicked.connect(self.refresh_requested.emit)
+        button_layout.addWidget(refresh_btn)
+        layout.addLayout(button_layout)
         
         # 硬件信息文本区域
-        self.info_text = TextEdit()
+        self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
         self.info_text.setFont(QFont("Consolas", 10))
         layout.addWidget(self.info_text)
     
-    def update_hardware_info(self, hardware_info: Dict):
+    def update_hardware_info(self, hardware_info: dict):
         """更新硬件信息显示"""
         info_lines = []
         
@@ -634,52 +532,3 @@ class HardwareInfoCard(ElevatedCardWidget):
             info_lines.append(f"显示硬件信息时出错: {e}")
         
         self.info_text.setPlainText("\n".join(info_lines))
-
-
-class SystemStatsCard(SimpleCardWidget):
-    """系统统计卡片"""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setFixedHeight(120)
-        self.init_ui()
-    
-    def init_ui(self):
-        """初始化界面"""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 15, 20, 15)
-        
-        # 标题
-        title = StrongBodyLabel("系统统计")
-        layout.addWidget(title)
-        
-        # 统计信息网格
-        stats_layout = QGridLayout()
-        
-        # 启动时间
-        self.boot_time_label = CaptionLabel("启动时间: --")
-        stats_layout.addWidget(self.boot_time_label, 0, 0)
-        
-        # 运行时间
-        self.uptime_label = CaptionLabel("运行时间: --")
-        stats_layout.addWidget(self.uptime_label, 0, 1)
-        
-        # 进程数
-        self.process_count_label = CaptionLabel("进程数: --")
-        stats_layout.addWidget(self.process_count_label, 1, 0)
-        
-        # CPU核心数
-        self.cpu_count_label = CaptionLabel("CPU核心: --")
-        stats_layout.addWidget(self.cpu_count_label, 1, 1)
-        
-        layout.addLayout(stats_layout)
-    
-    def update_system_info(self, info: SystemInfo):
-        """更新系统统计信息"""
-        self.boot_time_label.setText(f"启动时间: {info.boot_time}")
-        self.uptime_label.setText(f"运行时间: {info.uptime}")
-        self.process_count_label.setText(f"进程数: {info.process_count}")
-        self.cpu_count_label.setText(f"CPU核心: {info.cpu_count}")
-
-
-# 消息提示函数已移至 ui_utils.py

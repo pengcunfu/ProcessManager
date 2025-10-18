@@ -1,32 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Fluent主窗口
-使用PySide6-Fluent-Widgets创建现代化主窗口
+主窗口
+使用原生PySide6创建现代化主窗口
 """
 
 import sys
 import platform
-from typing import Optional
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout
-from PySide6.QtCore import Qt, QTimer, QSize
-from PySide6.QtGui import QIcon
-
-from qfluentwidgets import (
-    FluentIcon as FIF,
-    NavigationInterface,
-    NavigationItemPosition,
-    MessageBox,
-    SplashScreen,
-    Theme,
-    setTheme,
-    setThemeColor,
-    qconfig,
-    isDarkTheme,
-    MSFluentWindow,
-    SubtitleLabel,
-    setFont
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QTabWidget, QMenuBar, QMenu, QStatusBar, QMessageBox
 )
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QAction
 
 from controllers import (
     SystemMonitorController,
@@ -43,69 +29,23 @@ from views.ui_components import (
 )
 from views.ui_utils import (
     show_success_message,
-    show_error_message,
-    show_warning_message,
-    show_info_message
+    show_error_message
 )
+from views.styles import get_app_stylesheet
 
 
-class ProcessInterface(QWidget):
-    """进程管理界面"""
+class SystemInfoInterface(QWidget):
+    """系统信息界面"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("ProcessManager")
         self.init_ui()
     
     def init_ui(self):
         """初始化界面"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(30, 30, 30, 30)
-        
-        # 进程表格卡片
-        self.process_card = ProcessTableCard()
-        layout.addWidget(self.process_card)
-    
-    def update_processes(self, processes):
-        """更新进程列表"""
-        self.process_card.update_processes(processes)
-
-
-class NetworkInterface(QWidget):
-    """网络监控界面"""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setObjectName("NetworkMonitor")
-        self.init_ui()
-    
-    def init_ui(self):
-        """初始化界面"""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(30, 30, 30, 30)
-        
-        # 网络连接表格卡片
-        self.network_card = NetworkTableCard()
-        layout.addWidget(self.network_card)
-    
-    def update_connections(self, connections):
-        """更新网络连接"""
-        self.network_card.update_connections(connections)
-
-
-class HardwareInterface(QWidget):
-    """硬件与系统信息界面"""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setObjectName("HardwareInfo")
-        self.init_ui()
-    
-    def init_ui(self):
-        """初始化界面"""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
         # 系统概览卡片
         self.overview_card = SystemOverviewCard()
@@ -121,45 +61,87 @@ class HardwareInterface(QWidget):
         
         layout.addStretch()
     
-    def update_hardware_info(self, hardware_info):
-        """更新硬件信息"""
-        self.hardware_card.update_hardware_info(hardware_info)
-    
     def update_system_info(self, system_info):
         """更新系统信息"""
         self.overview_card.update_system_info(system_info)
         self.stats_card.update_system_info(system_info)
+    
+    def update_hardware_info(self, hardware_info):
+        """更新硬件信息"""
+        self.hardware_card.update_hardware_info(hardware_info)
 
 
-class MainWindow(MSFluentWindow):
+class ProcessInterface(QWidget):
+    """进程管理界面"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化界面"""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # 进程表格卡片
+        self.process_card = ProcessTableCard()
+        layout.addWidget(self.process_card)
+    
+    def update_processes(self, processes):
+        """更新进程列表"""
+        self.process_card.update_processes(processes)
+
+
+class NetworkInterface(QWidget):
+    """网络监控界面"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化界面"""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # 网络连接表格卡片
+        self.network_card = NetworkTableCard()
+        layout.addWidget(self.network_card)
+    
+    def update_connections(self, connections):
+        """更新网络连接"""
+        self.network_card.update_connections(connections)
+
+
+class MainWindow(QMainWindow):
     """系统监控主窗口（MVC架构）"""
     
     def __init__(self):
         super().__init__()
         
-        # 设置窗口属性（先设置，让窗口快速显示）
+        # 设置窗口属性
         self.setWindowTitle("系统监控与进程管理工具")
         self.resize(1200, 800)
         
-        # 初始化基本组件
-        self.init_services()
+        # 初始化控制器
+        self.init_controllers()
         
         # 延迟初始化UI（减少启动阻塞）
         QTimer.singleShot(0, self._delayed_init)
         
         # 居中显示
-        self.move_to_center()
+        self.center_window()
     
     def _delayed_init(self):
         """延迟初始化UI和信号连接"""
         self.init_ui()
-        self.init_navigation()
+        self.init_menu()
         self.connect_signals()
         
         # 再延迟启动监控
         QTimer.singleShot(100, self.start_monitoring)
     
-    def init_services(self):
+    def init_controllers(self):
         """初始化控制器"""
         self.system_controller = SystemMonitorController()
         self.process_controller = ProcessController()
@@ -168,87 +150,85 @@ class MainWindow(MSFluentWindow):
     
     def init_ui(self):
         """初始化界面"""
-        # 只创建默认显示的界面（硬件与系统信息），其他界面延迟创建
-        self.hardware_interface = HardwareInterface()
+        # 创建中央部件
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
         
-        # 其他界面标记为未创建
-        self.process_interface = None
-        self.network_interface = None
+        layout = QVBoxLayout(central_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
         
-        # 添加界面到堆栈
-        self.addSubInterface(self.hardware_interface, FIF.DEVELOPER_TOOLS, "系统信息")
+        # 创建标签页
+        self.tab_widget = QTabWidget()
         
-        # 延迟添加其他界面（占位）
-        QTimer.singleShot(50, self._init_other_interfaces)
-        
-        # 设置默认界面
-        self.stackedWidget.setCurrentWidget(self.hardware_interface)
-        self.navigationInterface.setCurrentItem(self.hardware_interface.objectName())
-    
-    def _init_other_interfaces(self):
-        """延迟初始化其他界面"""
-        # 创建其他界面
+        # 创建各个界面
+        self.system_interface = SystemInfoInterface()
         self.process_interface = ProcessInterface()
         self.network_interface = NetworkInterface()
         
-        # 添加到导航
-        self.addSubInterface(self.process_interface, FIF.APPLICATION, "进程管理")
-        self.addSubInterface(self.network_interface, FIF.GLOBE, "网络监控")
+        # 添加标签页
+        self.tab_widget.addTab(self.system_interface, "系统信息")
+        self.tab_widget.addTab(self.process_interface, "进程管理")
+        self.tab_widget.addTab(self.network_interface, "网络监控")
         
-        # 连接这些界面的信号（如果还没连接）
-        self._connect_interface_signals()
+        layout.addWidget(self.tab_widget)
+        
+        # 状态栏
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+        self.status_bar.showMessage("就绪")
     
-    def init_navigation(self):
-        """初始化导航栏"""
-        # 添加设置页面
-        self.navigationInterface.addItem(
-            routeKey="Settings",
-            icon=FIF.HOME,
-            text="设置",
-            onClick=self.show_settings,
-            position=NavigationItemPosition.BOTTOM
-        )
+    def init_menu(self):
+        """初始化菜单栏"""
+        menubar = self.menuBar()
         
-        # 添加关于页面
-        self.navigationInterface.addItem(
-            routeKey="About",
-            icon=FIF.HOME,
-            text="关于",
-            onClick=self.show_about,
-            position=NavigationItemPosition.BOTTOM
-        )
+        # 文件菜单
+        file_menu = menubar.addMenu("文件")
+        
+        refresh_action = QAction("刷新", self)
+        refresh_action.setShortcut("F5")
+        refresh_action.triggered.connect(self.refresh_all_data)
+        file_menu.addAction(refresh_action)
+        
+        file_menu.addSeparator()
+        
+        exit_action = QAction("退出", self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        
+        # 帮助菜单
+        help_menu = menubar.addMenu("帮助")
+        
+        about_action = QAction("关于", self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
     
     def connect_signals(self):
         """连接信号和槽"""
         # 系统监控信号
         self.system_controller.system_info_updated.connect(self.on_system_info_updated)
-        self.system_controller.error_occurred.connect(self.on_system_monitor_error)
+        self.system_controller.error_occurred.connect(self.on_error)
         
         # 进程管理信号
         self.process_controller.processes_updated.connect(self.on_processes_updated)
         self.process_controller.process_killed.connect(self.on_process_killed)
-        self.process_controller.error_occurred.connect(self.on_process_manager_error)
+        self.process_controller.error_occurred.connect(self.on_error)
         
         # 网络监控信号
         self.network_controller.connections_updated.connect(self.on_connections_updated)
-        self.network_controller.error_occurred.connect(self.on_network_monitor_error)
+        self.network_controller.error_occurred.connect(self.on_error)
         
         # 硬件信息信号
         self.hardware_controller.hardware_info_updated.connect(self.on_hardware_info_updated)
-        self.hardware_controller.error_occurred.connect(self.on_hardware_service_error)
-    
-    def _connect_interface_signals(self):
-        """连接界面组件信号（延迟调用）"""
+        self.hardware_controller.error_occurred.connect(self.on_error)
+        
         # 界面组件信号
-        if self.process_interface:
-            self.process_interface.process_card.refresh_requested.connect(self.refresh_processes)
-            self.process_interface.process_card.kill_requested.connect(self.kill_process)
+        self.process_interface.process_card.refresh_requested.connect(self.refresh_processes)
+        self.process_interface.process_card.kill_requested.connect(self.kill_process)
         
-        if self.network_interface:
-            self.network_interface.network_card.refresh_requested.connect(self.refresh_network)
+        self.network_interface.network_card.refresh_requested.connect(self.refresh_network)
         
-        if self.hardware_interface:
-            self.hardware_interface.hardware_card.refresh_requested.connect(self.refresh_hardware)
+        self.system_interface.hardware_card.refresh_requested.connect(self.refresh_hardware)
     
     def start_monitoring(self):
         """开始监控"""
@@ -261,9 +241,9 @@ class MainWindow(MSFluentWindow):
         self.refresh_timer.start(5000)  # 每5秒刷新一次
         
         # 延迟加载数据，分批加载避免卡顿
-        QTimer.singleShot(200, self.refresh_hardware)  # 先加载硬件信息
-        QTimer.singleShot(500, self.refresh_processes)  # 再加载进程
-        QTimer.singleShot(1000, self.refresh_network)  # 最后加载网络
+        QTimer.singleShot(200, self.refresh_hardware)
+        QTimer.singleShot(500, self.refresh_processes)
+        QTimer.singleShot(1000, self.refresh_network)
     
     def refresh_all_data(self):
         """刷新所有数据"""
@@ -274,14 +254,17 @@ class MainWindow(MSFluentWindow):
     def refresh_processes(self):
         """刷新进程列表"""
         self.process_controller.get_processes(force_refresh=True)
+        self.status_bar.showMessage("进程列表已刷新", 2000)
     
     def refresh_network(self):
         """刷新网络连接"""
         self.network_controller.get_connections(force_refresh=True)
+        self.status_bar.showMessage("网络连接已刷新", 2000)
     
     def refresh_hardware(self):
         """刷新硬件信息"""
         self.hardware_controller.get_hardware_info()
+        self.status_bar.showMessage("硬件信息已刷新", 2000)
     
     def kill_process(self, pid: int, force: bool):
         """结束进程"""
@@ -289,23 +272,19 @@ class MainWindow(MSFluentWindow):
     
     def on_system_info_updated(self, system_info):
         """系统信息更新"""
-        if self.hardware_interface:
-            self.hardware_interface.update_system_info(system_info)
+        self.system_interface.update_system_info(system_info)
     
     def on_processes_updated(self, processes):
         """进程列表更新"""
-        if self.process_interface:
-            self.process_interface.update_processes(processes)
+        self.process_interface.update_processes(processes)
     
     def on_connections_updated(self, connections):
         """网络连接更新"""
-        if self.network_interface:
-            self.network_interface.update_connections(connections)
+        self.network_interface.update_connections(connections)
     
     def on_hardware_info_updated(self, hardware_info):
         """硬件信息更新"""
-        if self.hardware_interface:
-            self.hardware_interface.update_hardware_info(hardware_info)
+        self.system_interface.update_hardware_info(hardware_info)
     
     def on_process_killed(self, pid: int, message: str):
         """进程结束成功"""
@@ -313,43 +292,22 @@ class MainWindow(MSFluentWindow):
         # 刷新进程列表
         QTimer.singleShot(1000, self.refresh_processes)
     
-    def on_system_monitor_error(self, error_message: str):
-        """系统监控错误"""
-        show_error_message(self, f"系统监控错误: {error_message}")
-    
-    def on_process_manager_error(self, error_message: str):
-        """进程管理错误"""
-        show_error_message(self, f"进程管理错误: {error_message}")
-    
-    def on_network_monitor_error(self, error_message: str):
-        """网络监控错误"""
-        show_error_message(self, f"网络监控错误: {error_message}")
-    
-    def on_hardware_service_error(self, error_message: str):
-        """硬件信息错误"""
-        show_error_message(self, f"硬件信息错误: {error_message}")
-    
-    def show_settings(self):
-        """显示设置对话框"""
-        w = MessageBox(
-            "设置",
-            "设置功能正在开发中...\n\n可配置项目:\n• 刷新间隔\n• 主题设置\n• 显示选项",
-            self
-        )
-        w.exec()
+    def on_error(self, error_message: str):
+        """错误处理"""
+        show_error_message(self, error_message)
     
     def show_about(self):
         """显示关于对话框"""
         about_text = f"""系统监控与进程管理工具 v3.0
 
-基于PySide6和Fluent-Widgets开发的现代化系统监控工具
+基于PySide6开发的现代化系统监控工具
 
 功能特性:
 • 实时系统资源监控
 • 进程管理和监控
 • 网络连接监控
 • 硬件信息查看
-• 现代化Fluent设计界面
+• MVC架构设计
 
 系统信息:
 • 操作系统: {platform.system()} {platform.release()}
@@ -358,13 +316,11 @@ class MainWindow(MSFluentWindow):
 
 开发框架:
 • PySide6
-• PySide6-Fluent-Widgets
 • psutil"""
         
-        w = MessageBox("关于", about_text, self)
-        w.exec()
+        QMessageBox.about(self, "关于", about_text)
     
-    def move_to_center(self):
+    def center_window(self):
         """将窗口移动到屏幕中央"""
         screen = QApplication.primaryScreen().geometry()
         window = self.geometry()
@@ -388,51 +344,21 @@ class MainWindow(MSFluentWindow):
             event.accept()
 
 
-class Application(QApplication):
-    """Fluent应用程序"""
-    
-    def __init__(self, argv):
-        super().__init__(argv)
-        self.setup_application()
-    
-    def setup_application(self):
-        """设置应用程序"""
-        # 设置应用程序信息
-        self.setApplicationName("系统监控工具")
-        self.setApplicationVersion("3.0")
-        self.setOrganizationName("System Monitor")
-        self.setOrganizationDomain("systemmonitor.local")
-        
-        # 设置主题
-        setTheme(Theme.AUTO)  # 自动主题
-        setThemeColor('#0078d4')  # 设置主题色
-        
-        # 设置字体
-        # setFont(self.font())  # 暂时注释掉，可能有兼容性问题
-        
-        # 国际化支持
-        # translator = FluentTranslator()  # 暂时注释掉，可能有兼容性问题
-        # self.installTranslator(translator)
-
-
-def create_splash_screen():
-    """创建启动画面"""
-    try:
-        splash = SplashScreen("系统监控工具", parent=None)
-        splash.raise_()
-        return splash
-    except:
-        # 如果SplashScreen有问题，返回None
-        return None
-
-
 def main():
     """主函数"""
     try:
         # 创建应用程序
-        app = Application(sys.argv)
+        app = QApplication(sys.argv)
         
-        # 直接创建并显示主窗口（不使用启动画面以加快启动速度）
+        # 设置应用程序信息
+        app.setApplicationName("系统监控工具")
+        app.setApplicationVersion("3.0")
+        app.setOrganizationName("System Monitor")
+        
+        # 应用样式表
+        app.setStyleSheet(get_app_stylesheet())
+        
+        # 创建并显示主窗口
         window = MainWindow()
         window.show()
         

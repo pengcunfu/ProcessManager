@@ -28,18 +28,20 @@ from qfluentwidgets import (
     setFont
 )
 
-from business_logic import (
-    SystemMonitorService, 
-    ProcessManagerService, 
-    NetworkMonitorService, 
-    HardwareInfoService
+from controllers import (
+    SystemMonitorController,
+    ProcessController,
+    NetworkController,
+    HardwareController
 )
-from fluent_ui_components import (
+from views.ui_components import (
     SystemOverviewCard,
     ProcessTableCard,
     NetworkTableCard,
     HardwareInfoCard,
-    SystemStatsCard,
+    SystemStatsCard
+)
+from views.ui_utils import (
     show_success_message,
     show_error_message,
     show_warning_message,
@@ -143,8 +145,8 @@ class HardwareInterface(QWidget):
         self.hardware_card.update_hardware_info(hardware_info)
 
 
-class FluentMainWindow(MSFluentWindow):
-    """Fluent设计风格的主窗口"""
+class MainWindow(MSFluentWindow):
+    """系统监控主窗口（MVC架构）"""
     
     def __init__(self):
         super().__init__()
@@ -172,11 +174,11 @@ class FluentMainWindow(MSFluentWindow):
         QTimer.singleShot(100, self.start_monitoring)
     
     def init_services(self):
-        """初始化业务服务"""
-        self.system_monitor = SystemMonitorService()
-        self.process_manager = ProcessManagerService()
-        self.network_monitor = NetworkMonitorService()
-        self.hardware_service = HardwareInfoService()
+        """初始化控制器"""
+        self.system_controller = SystemMonitorController()
+        self.process_controller = ProcessController()
+        self.network_controller = NetworkController()
+        self.hardware_controller = HardwareController()
     
     def init_ui(self):
         """初始化界面"""
@@ -236,21 +238,21 @@ class FluentMainWindow(MSFluentWindow):
     def connect_signals(self):
         """连接信号和槽"""
         # 系统监控信号
-        self.system_monitor.system_info_updated.connect(self.on_system_info_updated)
-        self.system_monitor.error_occurred.connect(self.on_system_monitor_error)
+        self.system_controller.system_info_updated.connect(self.on_system_info_updated)
+        self.system_controller.error_occurred.connect(self.on_system_monitor_error)
         
         # 进程管理信号
-        self.process_manager.processes_updated.connect(self.on_processes_updated)
-        self.process_manager.process_killed.connect(self.on_process_killed)
-        self.process_manager.error_occurred.connect(self.on_process_manager_error)
+        self.process_controller.processes_updated.connect(self.on_processes_updated)
+        self.process_controller.process_killed.connect(self.on_process_killed)
+        self.process_controller.error_occurred.connect(self.on_process_manager_error)
         
         # 网络监控信号
-        self.network_monitor.connections_updated.connect(self.on_connections_updated)
-        self.network_monitor.error_occurred.connect(self.on_network_monitor_error)
+        self.network_controller.connections_updated.connect(self.on_connections_updated)
+        self.network_controller.error_occurred.connect(self.on_network_monitor_error)
         
         # 硬件信息信号
-        self.hardware_service.hardware_info_updated.connect(self.on_hardware_info_updated)
-        self.hardware_service.error_occurred.connect(self.on_hardware_service_error)
+        self.hardware_controller.hardware_info_updated.connect(self.on_hardware_info_updated)
+        self.hardware_controller.error_occurred.connect(self.on_hardware_service_error)
     
     def _connect_interface_signals(self):
         """连接界面组件信号（延迟调用）"""
@@ -268,7 +270,7 @@ class FluentMainWindow(MSFluentWindow):
     def start_monitoring(self):
         """开始监控"""
         # 启动系统监控
-        self.system_monitor.start_monitoring()
+        self.system_controller.start_monitoring()
         
         # 定时刷新其他信息
         self.refresh_timer = QTimer()
@@ -288,19 +290,19 @@ class FluentMainWindow(MSFluentWindow):
     
     def refresh_processes(self):
         """刷新进程列表"""
-        self.process_manager.get_processes(force_refresh=True)
+        self.process_controller.get_processes(force_refresh=True)
     
     def refresh_network(self):
         """刷新网络连接"""
-        self.network_monitor.get_connections(force_refresh=True)
+        self.network_controller.get_connections(force_refresh=True)
     
     def refresh_hardware(self):
         """刷新硬件信息"""
-        self.hardware_service.get_hardware_info()
+        self.hardware_controller.get_hardware_info()
     
     def kill_process(self, pid: int, force: bool):
         """结束进程"""
-        self.process_manager.kill_process(pid, force)
+        self.process_controller.kill_process(pid, force)
     
     def on_system_info_updated(self, system_info):
         """系统信息更新"""
@@ -390,7 +392,7 @@ class FluentMainWindow(MSFluentWindow):
         """关闭事件"""
         try:
             # 停止监控服务
-            self.system_monitor.stop_monitoring()
+            self.system_controller.stop_monitoring()
             
             # 停止定时器
             if hasattr(self, 'refresh_timer'):
@@ -402,7 +404,7 @@ class FluentMainWindow(MSFluentWindow):
             event.accept()
 
 
-class FluentApplication(QApplication):
+class Application(QApplication):
     """Fluent应用程序"""
     
     def __init__(self, argv):
@@ -444,10 +446,10 @@ def main():
     """主函数"""
     try:
         # 创建应用程序
-        app = FluentApplication(sys.argv)
+        app = Application(sys.argv)
         
         # 直接创建并显示主窗口（不使用启动画面以加快启动速度）
-        window = FluentMainWindow()
+        window = MainWindow()
         window.show()
         
         # 运行应用程序

@@ -9,11 +9,13 @@ from .system_controller import SystemMonitorController
 from .process_controller import ProcessController
 from .network_controller import NetworkController
 from .hardware_controller import HardwareController
+from .traffic_controller import TrafficMonitorController
 
 __all__ = [
     'SystemMonitorController',
     'ProcessController',
     'NetworkController',
-    'HardwareController'
+    'HardwareController',
+    'TrafficMonitorController'
 ]
 

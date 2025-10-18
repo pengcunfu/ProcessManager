@@ -18,14 +18,17 @@ from controllers import (
     SystemMonitorController,
     ProcessController,
     NetworkController,
-    HardwareController
+    HardwareController,
+    TrafficMonitorController
 )
 from views.ui_components import (
     SystemOverviewCard,
     ProcessTableCard,
     NetworkTableCard,
     HardwareInfoCard,
-    SystemStatsCard
+    SystemStatsCard,
+    TrafficMonitorCard,
+    ProcessTrafficCard
 )
 from views.ui_utils import (
     show_success_message,
@@ -113,6 +116,36 @@ class NetworkInterface(QWidget):
         self.network_card.update_connections(connections)
 
 
+class TrafficInterface(QWidget):
+    """流量监控界面"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化界面"""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # 实时流量监控卡片
+        self.traffic_card = TrafficMonitorCard()
+        layout.addWidget(self.traffic_card)
+        
+        # 进程流量统计卡片
+        self.process_traffic_card = ProcessTrafficCard()
+        layout.addWidget(self.process_traffic_card)
+    
+    def update_traffic(self, traffic_data):
+        """更新流量信息"""
+        self.traffic_card.update_traffic(traffic_data)
+    
+    def update_process_traffic(self, traffic_list):
+        """更新进程流量列表"""
+        self.process_traffic_card.update_process_traffic(traffic_list)
+
+
 class MainWindow(QMainWindow):
     """系统监控主窗口（MVC架构）"""
     
@@ -147,6 +180,7 @@ class MainWindow(QMainWindow):
         self.process_controller = ProcessController()
         self.network_controller = NetworkController()
         self.hardware_controller = HardwareController()
+        self.traffic_controller = TrafficMonitorController()
     
     def init_ui(self):
         """初始化界面"""
@@ -164,11 +198,13 @@ class MainWindow(QMainWindow):
         self.system_interface = SystemInfoInterface()
         self.process_interface = ProcessInterface()
         self.network_interface = NetworkInterface()
+        self.traffic_interface = TrafficInterface()
         
         # 添加标签页
         self.tab_widget.addTab(self.system_interface, "系统信息")
         self.tab_widget.addTab(self.process_interface, "进程管理")
         self.tab_widget.addTab(self.network_interface, "网络监控")
+        self.tab_widget.addTab(self.traffic_interface, "流量监控")
         
         layout.addWidget(self.tab_widget)
         
@@ -222,6 +258,11 @@ class MainWindow(QMainWindow):
         self.hardware_controller.hardware_info_updated.connect(self.on_hardware_info_updated)
         self.hardware_controller.error_occurred.connect(self.on_error)
         
+        # 流量监控信号
+        self.traffic_controller.traffic_updated.connect(self.on_traffic_updated)
+        self.traffic_controller.process_traffic_updated.connect(self.on_process_traffic_updated)
+        self.traffic_controller.error_occurred.connect(self.on_error)
+        
         # 界面组件信号
         self.process_interface.process_card.refresh_requested.connect(self.refresh_processes)
         self.process_interface.process_card.kill_requested.connect(self.kill_process)
@@ -229,11 +270,16 @@ class MainWindow(QMainWindow):
         self.network_interface.network_card.refresh_requested.connect(self.refresh_network)
         
         self.system_interface.hardware_card.refresh_requested.connect(self.refresh_hardware)
+        
+        self.traffic_interface.process_traffic_card.refresh_requested.connect(self.refresh_process_traffic)
     
     def start_monitoring(self):
         """开始监控"""
         # 启动系统监控（自动刷新）
         self.system_controller.start_monitoring()
+        
+        # 启动流量监控（自动刷新）
+        self.traffic_controller.start_monitoring(interval=1000)  # 每1秒更新一次流量
         
         # 定时刷新硬件信息（仅硬件信息自动刷新）
         self.refresh_timer = QTimer()
@@ -299,6 +345,18 @@ class MainWindow(QMainWindow):
         """硬件信息更新"""
         self.system_interface.update_hardware_info(hardware_info)
     
+    def on_traffic_updated(self, traffic_data):
+        """流量信息更新"""
+        self.traffic_interface.update_traffic(traffic_data)
+    
+    def on_process_traffic_updated(self, traffic_list):
+        """进程流量更新"""
+        self.traffic_interface.update_process_traffic(traffic_list)
+    
+    def refresh_process_traffic(self):
+        """刷新进程流量"""
+        self.traffic_controller.get_process_traffic()
+    
     def on_process_killed(self, pid: int, message: str):
         """进程结束成功"""
         show_success_message(self, message)
@@ -311,7 +369,7 @@ class MainWindow(QMainWindow):
     
     def show_about(self):
         """显示关于对话框"""
-        about_text = f"""系统监控与进程管理工具 v3.0
+        about_text = f"""系统监控与进程管理工具 v3.1
 
 基于PySide6开发的现代化系统监控工具
 
@@ -319,6 +377,7 @@ class MainWindow(QMainWindow):
 • 实时系统资源监控
 • 进程管理和监控
 • 网络连接监控
+• 网络流量监控（实时速度+进程流量）
 • 硬件信息查看
 • MVC架构设计
 
@@ -346,6 +405,7 @@ class MainWindow(QMainWindow):
         try:
             # 停止监控服务
             self.system_controller.stop_monitoring()
+            self.traffic_controller.stop_monitoring()
             
             # 停止定时器
             if hasattr(self, 'refresh_timer'):

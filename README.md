@@ -76,19 +76,48 @@
 pip install -r requirements.txt
 ```
 
-### 运行程序
+### 项目结构
 
-#### 方法1：使用Python直接运行
-```bash
-python main.py
+```
+ProcessManager/
+├── main_fluent.py              # Fluent版本入口（推荐）
+├── fluent_main_window.py       # Fluent主窗口
+├── fluent_ui_components.py     # Fluent UI组件
+├── business_logic.py           # 业务逻辑层
+├── requirements.txt            # 依赖包列表
+├── README.md                   # 项目说明
+├── OPTIMIZATION_SUMMARY.md     # 性能优化总结
+└── v1/                         # v1版本（经典版本）
+    ├── main.py                 # v1入口文件
+    ├── styles.py               # 样式定义
+    ├── system_monitor.py       # 系统监控模块
+    ├── ui_components.py        # UI组件
+    └── README_V1.md            # v1说明文档
 ```
 
-#### 方法2：使用系统信息工具（如果存在）
+## 运行程序
+
+#### 方法1：运行Fluent版本（✨ 推荐，现代化界面，启动更快）
 ```bash
-python system_info_tool.py
+python main_fluent.py
 ```
 
-#### 方法3：使用批处理文件（Windows）
+#### 方法2：运行经典版本（v1）
+```bash
+python v1/main.py
+```
+
+#### 方法3：快速测试（快速查看启动速度）
+```bash
+python quick_test.py
+```
+
+#### 方法4：详细性能测试
+```bash
+python test_startup_performance.py
+```
+
+#### 方法5：使用批处理文件（Windows）
 ```bash
 run.bat
 ```
@@ -174,6 +203,11 @@ run.bat
 6. **建议**: 建议以管理员身份运行程序以获得完整功能
 7. **磁盘监控**: 在Windows系统上，磁盘使用率显示的是根目录（C:）的使用情况
 8. **多线程**: 程序使用多线程技术，系统信息更新不会影响界面响应性
+9. **性能优化**: 
+   - CPU使用率在前几次更新时可能不够精确
+   - 进程详细信息（exe路径、线程数等）需要点击"详细信息"查看
+   - 最多显示200个进程和500个网络连接
+   - 详细优化说明请查看 `docs/PERFORMANCE_OPTIMIZATION.md`
 
 ## 故障排除
 
@@ -195,6 +229,11 @@ A: 某些网络连接信息可能需要更高权限才能访问
 - **跨平台**: 支持Windows、macOS和Linux
 - **实时更新**: 自动刷新系统信息
 - **异常处理**: 完善的错误处理机制
+- **性能优化**: 
+  - 延迟加载和分批加载数据
+  - 智能缓存机制减少系统调用
+  - 优化的进程信息收集
+  - 启动时间<2秒
 
 ## 开发信息
 

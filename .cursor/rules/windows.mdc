@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+---
+# Windows 开发环境规则
+
+本项目在 Windows 平台上开发。所有系统命令使用 PowerShell 语法。
+
+## 命令规范：
+- 使用 PowerShell 语法，而非 Linux/Unix 命令
+- 使用反斜杠 `\` 或正斜杠 `/` 作为路径分隔符（PowerShell 兼容）
+- 避免使用 `&&` 连接符，使用分号 `;` 或分别执行
+- 使用 PowerShell cmdlet 进行文件操作（例如：`Get-ChildItem`、`Copy-Item`）
+
+## 常用命令映射：
+- `ls` → `Get-ChildItem` 或 `dir`
+- `cat` → `Get-Content`
+- `cp` → `Copy-Item`
+- `mv` → `Move-Item`
+- `rm` → `Remove-Item`

@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+# Git 提交规则
+
+在每次对话结束后，如果项目文件有修改，使用 git 提交它们。
+
+## 提交要求：
+- 使用英文提交消息，并附上简短描述
+- 格式：type: brief description（例如：fix: user login issue）
+- 提交前确保代码能够编译
+- 如有需要推送到远程仓库

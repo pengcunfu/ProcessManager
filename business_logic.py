@@ -74,14 +74,15 @@ class SystemMonitorService(QObject):
         self.update_interval = 2.0  # 更新间隔（秒）
         self._timer = QTimer()
         self._timer.timeout.connect(self._update_system_info)
-        
-        # 初始化CPU百分比计算
-        psutil.cpu_percent()
+        self._cpu_initialized = False  # CPU监控是否已初始化
     
     def start_monitoring(self):
         """开始监控"""
         if not self.is_running:
             self.is_running = True
+            # 异步初始化CPU监控
+            if not self._cpu_initialized:
+                QTimer.singleShot(0, self._init_cpu_monitoring)
             self._timer.start(int(self.update_interval * 1000))
     
     def stop_monitoring(self):
@@ -96,11 +97,19 @@ class SystemMonitorService(QObject):
         if self.is_running:
             self._timer.setInterval(int(interval * 1000))
     
+    def _init_cpu_monitoring(self):
+        """初始化CPU监控（在后台异步执行）"""
+        try:
+            psutil.cpu_percent()  # 初始化CPU监控
+            self._cpu_initialized = True
+        except Exception as e:
+            print(f"初始化CPU监控失败: {e}")
+    
     def _update_system_info(self):
         """更新系统信息"""
         try:
-            # CPU信息
-            cpu_percent = psutil.cpu_percent(interval=None)
+            # CPU信息（不阻塞，使用缓存值）
+            cpu_percent = psutil.cpu_percent(interval=0)
             cpu_count = psutil.cpu_count()
             
             # 内存信息
@@ -179,10 +188,13 @@ class ProcessManagerService(QObject):
             processes = []
             
             # 限制获取的进程数量，避免性能问题
-            max_processes = 300
+            max_processes = 200
             process_count = 0
             
-            for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status', 'create_time']):
+            # 一次性获取所有需要的属性，减少系统调用
+            attrs = ['pid', 'name', 'cpu_percent', 'memory_percent', 'memory_info', 'status', 'create_time']
+            
+            for proc in psutil.process_iter(attrs):
                 if process_count >= max_processes:
                     break
                 
@@ -190,47 +202,30 @@ class ProcessManagerService(QObject):
                     info = proc.info
                     
                     # 获取内存使用量（MB）
-                    try:
-                        memory_info = proc.memory_info()
-                        memory_mb = memory_info.rss / 1024 / 1024
-                    except:
-                        memory_mb = 0
+                    memory_mb = 0
+                    if info.get('memory_info'):
+                        memory_mb = info['memory_info'].rss / 1024 / 1024
                     
                     # 获取创建时间
-                    try:
-                        create_time = datetime.fromtimestamp(info['create_time']).strftime('%Y-%m-%d %H:%M:%S')
-                    except:
-                        create_time = "未知"
+                    create_time = "未知"
+                    if info.get('create_time'):
+                        try:
+                            create_time = datetime.fromtimestamp(info['create_time']).strftime('%Y-%m-%d %H:%M:%S')
+                        except:
+                            pass
                     
-                    # 获取可执行文件路径
-                    try:
-                        exe_path = proc.exe()
-                    except:
-                        exe_path = ""
-                    
-                    # 获取线程数
-                    try:
-                        num_threads = proc.num_threads()
-                    except:
-                        num_threads = 0
-                    
-                    # 获取父进程ID
-                    try:
-                        parent_pid = proc.ppid()
-                    except:
-                        parent_pid = None
-                    
+                    # 只在需要时才获取详细信息（延迟加载）
                     process_info = ProcessInfo(
-                        pid=info['pid'],
-                        name=info['name'] or 'Unknown',
-                        cpu_percent=info['cpu_percent'] or 0,
-                        memory_percent=info['memory_percent'] or 0,
+                        pid=info.get('pid', 0),
+                        name=info.get('name', 'Unknown'),
+                        cpu_percent=info.get('cpu_percent', 0) or 0,
+                        memory_percent=info.get('memory_percent', 0) or 0,
                         memory_mb=memory_mb,
-                        status=info['status'] or 'Unknown',
+                        status=info.get('status', 'Unknown'),
                         create_time=create_time,
-                        exe_path=exe_path,
-                        num_threads=num_threads,
-                        parent_pid=parent_pid
+                        exe_path="",  # 延迟加载
+                        num_threads=0,  # 延迟加载
+                        parent_pid=None  # 延迟加载
                     )
                     
                     processes.append(process_info)
@@ -354,9 +349,19 @@ class NetworkMonitorService(QObject):
         
         try:
             connections = []
+            max_connections = 500  # 限制最大连接数
             
             # 获取所有网络连接
-            for conn in psutil.net_connections(kind='inet'):
+            try:
+                all_conns = psutil.net_connections(kind='inet')
+            except psutil.AccessDenied:
+                self.error_occurred.emit("权限不足，无法获取网络连接信息")
+                return self._connections_cache if self._connections_cache else []
+            
+            for idx, conn in enumerate(all_conns):
+                if idx >= max_connections:
+                    break
+                    
                 try:
                     # 格式化地址
                     local_addr = f"{conn.laddr.ip}:{conn.laddr.port}" if conn.laddr else "N/A"
@@ -390,7 +395,7 @@ class NetworkMonitorService(QObject):
             
         except Exception as e:
             self.error_occurred.emit(f"获取网络连接失败: {str(e)}")
-            return []
+            return self._connections_cache if self._connections_cache else []
 
 
 class HardwareInfoService(QObject):

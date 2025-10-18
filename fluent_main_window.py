@@ -148,19 +148,28 @@ class FluentMainWindow(MSFluentWindow):
     
     def __init__(self):
         super().__init__()
-        self.init_services()
-        self.init_ui()
-        self.init_navigation()
-        self.connect_signals()
-        self.start_monitoring()
         
-        # 设置窗口属性
+        # 设置窗口属性（先设置，让窗口快速显示）
         self.setWindowTitle("系统监控与进程管理工具")
-        self.setWindowIcon(QIcon(":/images/logo.png"))  # 如果有图标的话
         self.resize(1200, 800)
+        
+        # 初始化基本组件
+        self.init_services()
+        
+        # 延迟初始化UI（减少启动阻塞）
+        QTimer.singleShot(0, self._delayed_init)
         
         # 居中显示
         self.move_to_center()
+    
+    def _delayed_init(self):
+        """延迟初始化UI和信号连接"""
+        self.init_ui()
+        self.init_navigation()
+        self.connect_signals()
+        
+        # 再延迟启动监控
+        QTimer.singleShot(100, self.start_monitoring)
     
     def init_services(self):
         """初始化业务服务"""
@@ -171,21 +180,38 @@ class FluentMainWindow(MSFluentWindow):
     
     def init_ui(self):
         """初始化界面"""
-        # 创建各个界面
+        # 只创建默认显示的界面，其他界面延迟创建
         self.overview_interface = SystemOverviewInterface()
-        self.process_interface = ProcessInterface()
-        self.network_interface = NetworkInterface()
-        self.hardware_interface = HardwareInterface()
+        
+        # 其他界面标记为未创建
+        self.process_interface = None
+        self.network_interface = None
+        self.hardware_interface = None
         
         # 添加界面到堆栈
         self.addSubInterface(self.overview_interface, FIF.HOME, "系统概览")
-        self.addSubInterface(self.process_interface, FIF.APPLICATION, "进程管理")
-        self.addSubInterface(self.network_interface, FIF.GLOBE, "网络监控")
-        self.addSubInterface(self.hardware_interface, FIF.INFO, "硬件信息")
+        
+        # 延迟添加其他界面（占位）
+        QTimer.singleShot(50, self._init_other_interfaces)
         
         # 设置默认界面
         self.stackedWidget.setCurrentWidget(self.overview_interface)
         self.navigationInterface.setCurrentItem(self.overview_interface.objectName())
+    
+    def _init_other_interfaces(self):
+        """延迟初始化其他界面"""
+        # 创建其他界面
+        self.process_interface = ProcessInterface()
+        self.network_interface = NetworkInterface()
+        self.hardware_interface = HardwareInterface()
+        
+        # 添加到导航
+        self.addSubInterface(self.process_interface, FIF.APPLICATION, "进程管理")
+        self.addSubInterface(self.network_interface, FIF.GLOBE, "网络监控")
+        self.addSubInterface(self.hardware_interface, FIF.INFO, "硬件信息")
+        
+        # 连接这些界面的信号（如果还没连接）
+        self._connect_interface_signals()
     
     def init_navigation(self):
         """初始化导航栏"""
@@ -225,14 +251,19 @@ class FluentMainWindow(MSFluentWindow):
         # 硬件信息信号
         self.hardware_service.hardware_info_updated.connect(self.on_hardware_info_updated)
         self.hardware_service.error_occurred.connect(self.on_hardware_service_error)
-        
+    
+    def _connect_interface_signals(self):
+        """连接界面组件信号（延迟调用）"""
         # 界面组件信号
-        self.process_interface.process_card.refresh_requested.connect(self.refresh_processes)
-        self.process_interface.process_card.kill_requested.connect(self.kill_process)
+        if self.process_interface:
+            self.process_interface.process_card.refresh_requested.connect(self.refresh_processes)
+            self.process_interface.process_card.kill_requested.connect(self.kill_process)
         
-        self.network_interface.network_card.refresh_requested.connect(self.refresh_network)
+        if self.network_interface:
+            self.network_interface.network_card.refresh_requested.connect(self.refresh_network)
         
-        self.hardware_interface.hardware_card.refresh_requested.connect(self.refresh_hardware)
+        if self.hardware_interface:
+            self.hardware_interface.hardware_card.refresh_requested.connect(self.refresh_hardware)
     
     def start_monitoring(self):
         """开始监控"""
@@ -244,8 +275,10 @@ class FluentMainWindow(MSFluentWindow):
         self.refresh_timer.timeout.connect(self.refresh_all_data)
         self.refresh_timer.start(5000)  # 每5秒刷新一次
         
-        # 初始加载数据
-        self.refresh_all_data()
+        # 延迟加载数据，分批加载避免卡顿
+        QTimer.singleShot(200, self.refresh_hardware)  # 先加载硬件信息
+        QTimer.singleShot(500, self.refresh_processes)  # 再加载进程
+        QTimer.singleShot(1000, self.refresh_network)  # 最后加载网络
     
     def refresh_all_data(self):
         """刷新所有数据"""
@@ -275,15 +308,18 @@ class FluentMainWindow(MSFluentWindow):
     
     def on_processes_updated(self, processes):
         """进程列表更新"""
-        self.process_interface.update_processes(processes)
+        if self.process_interface:
+            self.process_interface.update_processes(processes)
     
     def on_connections_updated(self, connections):
         """网络连接更新"""
-        self.network_interface.update_connections(connections)
+        if self.network_interface:
+            self.network_interface.update_connections(connections)
     
     def on_hardware_info_updated(self, hardware_info):
         """硬件信息更新"""
-        self.hardware_interface.update_hardware_info(hardware_info)
+        if self.hardware_interface:
+            self.hardware_interface.update_hardware_info(hardware_info)
     
     def on_process_killed(self, pid: int, message: str):
         """进程结束成功"""
@@ -410,30 +446,17 @@ def main():
         # 创建应用程序
         app = FluentApplication(sys.argv)
         
-        # 创建启动画面
-        splash = create_splash_screen()
-        if splash:
-            splash.show()
-            # 处理启动事件
-            app.processEvents()
-        
-        # 创建主窗口
+        # 直接创建并显示主窗口（不使用启动画面以加快启动速度）
         window = FluentMainWindow()
-        
-        # 模拟加载过程
-        import time
-        time.sleep(0.5)
-        
-        # 显示主窗口并关闭启动画面
         window.show()
-        if splash:
-            splash.close()
         
         # 运行应用程序
         return app.exec()
         
     except Exception as e:
         print(f"启动应用程序时出错: {e}")
+        import traceback
+        traceback.print_exc()
         return 1
 
 

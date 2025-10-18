@@ -49,36 +49,6 @@ from views.ui_utils import (
 )
 
 
-class SystemOverviewInterface(QWidget):
-    """系统概览界面"""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setObjectName("SystemOverview")
-        self.init_ui()
-    
-    def init_ui(self):
-        """初始化界面"""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
-        
-        # 系统概览卡片
-        self.overview_card = SystemOverviewCard()
-        layout.addWidget(self.overview_card)
-        
-        # 系统统计卡片
-        self.stats_card = SystemStatsCard()
-        layout.addWidget(self.stats_card)
-        
-        layout.addStretch()
-    
-    def update_system_info(self, system_info):
-        """更新系统信息"""
-        self.overview_card.update_system_info(system_info)
-        self.stats_card.update_system_info(system_info)
-
-
 class ProcessInterface(QWidget):
     """进程管理界面"""
     
@@ -124,7 +94,7 @@ class NetworkInterface(QWidget):
 
 
 class HardwareInterface(QWidget):
-    """硬件信息界面"""
+    """硬件与系统信息界面"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -135,14 +105,30 @@ class HardwareInterface(QWidget):
         """初始化界面"""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(20)
+        
+        # 系统概览卡片
+        self.overview_card = SystemOverviewCard()
+        layout.addWidget(self.overview_card)
+        
+        # 系统统计卡片
+        self.stats_card = SystemStatsCard()
+        layout.addWidget(self.stats_card)
         
         # 硬件信息卡片
         self.hardware_card = HardwareInfoCard()
         layout.addWidget(self.hardware_card)
+        
+        layout.addStretch()
     
     def update_hardware_info(self, hardware_info):
         """更新硬件信息"""
         self.hardware_card.update_hardware_info(hardware_info)
+    
+    def update_system_info(self, system_info):
+        """更新系统信息"""
+        self.overview_card.update_system_info(system_info)
+        self.stats_card.update_system_info(system_info)
 
 
 class MainWindow(MSFluentWindow):
@@ -182,35 +168,32 @@ class MainWindow(MSFluentWindow):
     
     def init_ui(self):
         """初始化界面"""
-        # 只创建默认显示的界面，其他界面延迟创建
-        self.overview_interface = SystemOverviewInterface()
+        # 只创建默认显示的界面（硬件与系统信息），其他界面延迟创建
+        self.hardware_interface = HardwareInterface()
         
         # 其他界面标记为未创建
         self.process_interface = None
         self.network_interface = None
-        self.hardware_interface = None
         
         # 添加界面到堆栈
-        self.addSubInterface(self.overview_interface, FIF.HOME, "系统概览")
+        self.addSubInterface(self.hardware_interface, FIF.DEVELOPER_TOOLS, "系统信息")
         
         # 延迟添加其他界面（占位）
         QTimer.singleShot(50, self._init_other_interfaces)
         
         # 设置默认界面
-        self.stackedWidget.setCurrentWidget(self.overview_interface)
-        self.navigationInterface.setCurrentItem(self.overview_interface.objectName())
+        self.stackedWidget.setCurrentWidget(self.hardware_interface)
+        self.navigationInterface.setCurrentItem(self.hardware_interface.objectName())
     
     def _init_other_interfaces(self):
         """延迟初始化其他界面"""
         # 创建其他界面
         self.process_interface = ProcessInterface()
         self.network_interface = NetworkInterface()
-        self.hardware_interface = HardwareInterface()
         
         # 添加到导航
         self.addSubInterface(self.process_interface, FIF.APPLICATION, "进程管理")
         self.addSubInterface(self.network_interface, FIF.GLOBE, "网络监控")
-        self.addSubInterface(self.hardware_interface, FIF.INFO, "硬件信息")
         
         # 连接这些界面的信号（如果还没连接）
         self._connect_interface_signals()
@@ -306,7 +289,8 @@ class MainWindow(MSFluentWindow):
     
     def on_system_info_updated(self, system_info):
         """系统信息更新"""
-        self.overview_interface.update_system_info(system_info)
+        if self.hardware_interface:
+            self.hardware_interface.update_system_info(system_info)
     
     def on_processes_updated(self, processes):
         """进程列表更新"""

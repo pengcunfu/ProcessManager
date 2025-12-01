@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QTextEdit
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
 
 from app.models import SystemInfo, ProcessInfo, NetworkConnection, format_bytes, format_frequency
 from app.controllers.traffic_controller import ProcessTrafficInfo
@@ -37,7 +36,6 @@ class SystemOverviewCard(QGroupBox):
         # CPU
         cpu_label = QLabel("CPU使用率")
         self.cpu_value = QLabel("0%")
-        self.cpu_value.setStyleSheet("font-weight: bold; font-size: 14pt;")
         self.cpu_progress = QProgressBar()
         self.cpu_progress.setFixedHeight(10)
         
@@ -48,7 +46,6 @@ class SystemOverviewCard(QGroupBox):
         # 内存
         memory_label = QLabel("内存使用率")
         self.memory_value = QLabel("0%")
-        self.memory_value.setStyleSheet("font-weight: bold; font-size: 14pt;")
         self.memory_progress = QProgressBar()
         self.memory_progress.setFixedHeight(10)
         
@@ -59,7 +56,6 @@ class SystemOverviewCard(QGroupBox):
         # 磁盘
         disk_label = QLabel("磁盘使用率")
         self.disk_value = QLabel("0%")
-        self.disk_value.setStyleSheet("font-weight: bold; font-size: 14pt;")
         self.disk_progress = QProgressBar()
         self.disk_progress.setFixedHeight(10)
         
@@ -462,7 +458,6 @@ class HardwareInfoCard(QGroupBox):
         # 硬件信息文本区域
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
-        self.info_text.setFont(QFont("Consolas", 10))
         layout.addWidget(self.info_text)
     
     def update_hardware_info(self, hardware_info: dict):
@@ -558,7 +553,6 @@ class TrafficMonitorCard(QGroupBox):
         upload_label.setAlignment(Qt.AlignCenter)
         self.upload_speed = QLabel("0 B/s")
         self.upload_speed.setAlignment(Qt.AlignCenter)
-        self.upload_speed.setStyleSheet("font-size: 18pt; font-weight: bold; color: #d32f2f;")
         upload_box.addWidget(upload_label)
         upload_box.addWidget(self.upload_speed)
         
@@ -568,7 +562,6 @@ class TrafficMonitorCard(QGroupBox):
         download_label.setAlignment(Qt.AlignCenter)
         self.download_speed = QLabel("0 B/s")
         self.download_speed.setAlignment(Qt.AlignCenter)
-        self.download_speed.setStyleSheet("font-size: 18pt; font-weight: bold; color: #388e3c;")
         download_box.addWidget(download_label)
         download_box.addWidget(self.download_speed)
         
@@ -586,12 +579,10 @@ class TrafficMonitorCard(QGroupBox):
         
         stats_layout.addWidget(QLabel("总上传:"), 0, 0)
         self.total_sent = QLabel("0 B")
-        self.total_sent.setStyleSheet("font-weight: bold;")
         stats_layout.addWidget(self.total_sent, 0, 1)
         
         stats_layout.addWidget(QLabel("总下载:"), 0, 2)
         self.total_recv = QLabel("0 B")
-        self.total_recv.setStyleSheet("font-weight: bold;")
         stats_layout.addWidget(self.total_recv, 0, 3)
         
         stats_layout.addWidget(QLabel("发送包:"), 1, 0)
@@ -646,7 +637,6 @@ class ProcessTrafficCard(QGroupBox):
         control_layout = QHBoxLayout()
         
         info_label = QLabel("💡 提示: 需要管理员权限才能查看详细的进程流量")
-        info_label.setStyleSheet("color: #666666; font-size: 9pt;")
         control_layout.addWidget(info_label)
         
         control_layout.addStretch()

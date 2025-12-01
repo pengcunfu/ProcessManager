@@ -34,7 +34,6 @@ from app.views.ui_utils import (
     show_success_message,
     show_error_message
 )
-from app.views.styles import get_app_stylesheet
 
 
 class SystemInfoInterface(QWidget):
@@ -428,8 +427,7 @@ def main():
         app.setApplicationVersion("3.0")
         app.setOrganizationName("System Monitor")
         
-        # 应用样式表
-        app.setStyleSheet(get_app_stylesheet())
+        # 使用PySide6默认样式
         
         # 创建并显示主窗口
         window = MainWindow()

@@ -421,7 +421,7 @@ def main():
     try:
         # 创建应用程序
         app = QApplication(sys.argv)
-        
+        app.setStyle("windowsvista")
         # 设置应用程序信息
         app.setApplicationName("系统监控工具")
         app.setApplicationVersion("3.0")

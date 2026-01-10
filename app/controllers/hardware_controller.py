@@ -55,6 +55,7 @@ class HardwareController(QObject):
                 'percent': memory.percent,
                 'swap_total': swap.total,
                 'swap_used': swap.used,
+                'swap_free': swap.free,
                 'swap_percent': swap.percent
             }
             
@@ -103,8 +104,12 @@ class HardwareController(QObject):
             
             self.hardware_info_updated.emit(hardware_info)
             return hardware_info
-            
+
         except Exception as e:
             self.error_occurred.emit(f"获取硬件信息失败: {str(e)}")
             return {}
+
+    def get_hardware_info_sync(self) -> Dict:
+        """同步获取硬件信息（用于对话框）"""
+        return self.get_hardware_info()
 

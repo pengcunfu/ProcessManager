@@ -26,6 +26,7 @@ from app.views.ui_components import (
     ProcessTableCard,
     NetworkTableCard,
     HardwareInfoCard,
+    HardwareInfoDialog,
     SystemStatsCard,
     TrafficMonitorCard,
     ProcessTrafficCard
@@ -48,29 +49,21 @@ class SystemInfoInterface(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
-        
+
         # 系统概览卡片
         self.overview_card = SystemOverviewCard()
         layout.addWidget(self.overview_card)
-        
+
         # 系统统计卡片
         self.stats_card = SystemStatsCard()
         layout.addWidget(self.stats_card)
-        
-        # 硬件信息卡片
-        self.hardware_card = HardwareInfoCard()
-        layout.addWidget(self.hardware_card)
-        
+
         layout.addStretch()
-    
+
     def update_system_info(self, system_info):
         """更新系统信息"""
         self.overview_card.update_system_info(system_info)
         self.stats_card.update_system_info(system_info)
-    
-    def update_hardware_info(self, hardware_info):
-        """更新硬件信息"""
-        self.hardware_card.update_hardware_info(hardware_info)
 
 
 class ProcessInterface(QWidget):
@@ -215,25 +208,33 @@ class MainWindow(QMainWindow):
     def init_menu(self):
         """初始化菜单栏"""
         menubar = self.menuBar()
-        
+
         # 文件菜单
         file_menu = menubar.addMenu("文件")
-        
+
         refresh_action = QAction("刷新当前页面", self)
         refresh_action.setShortcut("F5")
         refresh_action.triggered.connect(self.refresh_current_tab)
         file_menu.addAction(refresh_action)
-        
+
         file_menu.addSeparator()
-        
+
         exit_action = QAction("退出", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-        
+
+        # 工具菜单
+        tools_menu = menubar.addMenu("工具")
+
+        hardware_action = QAction("硬件信息", self)
+        hardware_action.setShortcut("Ctrl+H")
+        hardware_action.triggered.connect(self.show_hardware_detail)
+        tools_menu.addAction(hardware_action)
+
         # 帮助菜单
         help_menu = menubar.addMenu("帮助")
-        
+
         about_action = QAction("关于", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
@@ -252,11 +253,7 @@ class MainWindow(QMainWindow):
         # 网络监控信号
         self.network_controller.connections_updated.connect(self.on_connections_updated)
         self.network_controller.error_occurred.connect(self.on_error)
-        
-        # 硬件信息信号
-        self.hardware_controller.hardware_info_updated.connect(self.on_hardware_info_updated)
-        self.hardware_controller.error_occurred.connect(self.on_error)
-        
+
         # 流量监控信号
         self.traffic_controller.traffic_updated.connect(self.on_traffic_updated)
         self.traffic_controller.process_traffic_updated.connect(self.on_process_traffic_updated)
@@ -265,11 +262,9 @@ class MainWindow(QMainWindow):
         # 界面组件信号
         self.process_interface.process_card.refresh_requested.connect(self.refresh_processes)
         self.process_interface.process_card.kill_requested.connect(self.kill_process)
-        
+
         self.network_interface.network_card.refresh_requested.connect(self.refresh_network)
-        
-        self.system_interface.hardware_card.refresh_requested.connect(self.refresh_hardware)
-        
+
         self.traffic_interface.process_traffic_card.refresh_requested.connect(self.refresh_process_traffic)
     
     def start_monitoring(self):
@@ -323,6 +318,26 @@ class MainWindow(QMainWindow):
         """刷新硬件信息"""
         self.hardware_controller.get_hardware_info()
         self.status_bar.showMessage("硬件信息已刷新", 2000)
+
+    def show_hardware_detail(self):
+        """显示硬件信息详情对话框"""
+        # 创建对话框
+        dialog = HardwareInfoDialog(self)
+
+        # 连接刷新信号
+        dialog.refresh_requested = lambda: self._refresh_hardware_dialog(dialog)
+
+        # 获取并显示硬件信息
+        hardware_info = self.hardware_controller.get_hardware_info_sync()
+        dialog.update_hardware_info(hardware_info)
+
+        # 显示对话框
+        dialog.exec()
+
+    def _refresh_hardware_dialog(self, dialog):
+        """刷新硬件信息对话框"""
+        hardware_info = self.hardware_controller.get_hardware_info_sync()
+        dialog.update_hardware_info(hardware_info)
     
     def kill_process(self, pid: int, force: bool):
         """结束进程"""
@@ -339,11 +354,7 @@ class MainWindow(QMainWindow):
     def on_connections_updated(self, connections):
         """网络连接更新"""
         self.network_interface.update_connections(connections)
-    
-    def on_hardware_info_updated(self, hardware_info):
-        """硬件信息更新"""
-        self.system_interface.update_hardware_info(hardware_info)
-    
+
     def on_traffic_updated(self, traffic_data):
         """流量信息更新"""
         self.traffic_interface.update_traffic(traffic_data)

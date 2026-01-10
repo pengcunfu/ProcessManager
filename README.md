@@ -2,9 +2,9 @@
 
 一个使用原生 PySide6 开发的现代化系统监控和进程管理工具，采用标准MVC架构设计。
 
-## ✨ 主要特性
+## 主要特性
 
-### 🔧 系统信息
+### 系统信息
 - 实时CPU、内存、磁盘使用率监控
 - 系统启动时间和运行时间
 - 进程数量统计
@@ -14,50 +14,50 @@
 - 网络接口信息（IP、MAC地址）
 - 美观的进度条和卡片式展示
 
-### 📊 进程管理
+### 进程管理
 - 显示所有运行中的进程（PID、名称、CPU%、内存%等）
 - 搜索和过滤进程
 - 结束/强制结束进程
 - 查看进程详细信息
 - 多种排序方式
 
-### 🌐 网络监控
+### 网络监控
 - 显示所有网络连接（TCP/UDP）
 - 按协议和状态过滤
 - 显示本地/远程地址和端口
 - 关联进程PID
 
-### 📈 流量监控
+### 流量监控
 - 实时显示上传/下载速度（每秒更新）
 - 总流量统计（总上传/下载量、收发包数）
 - 进程流量分析（每个进程的网络连接数和IO统计）
 - 大字体速度显示，清晰易读
-- 💡 注意：查看进程流量详情需要管理员权限
+- 注意：查看进程流量详情需要管理员权限
 
-### 🎨 现代化界面
+### 现代化界面
 - 原生PySide6界面设计
 - 简洁清爽的UI风格
 - 响应式布局
 - 标签页导航
 
-## 📁 项目结构（MVC架构）
+## 项目结构（MVC架构）
 
 ```
 ProcessManager/
-├── app.py                      # 🚀 主入口文件（推荐使用）
+├── app.py                      # 主入口文件（推荐使用）
 │
-├── models/                     # 📦 模型层（数据模型）
+├── models/                     # 模型层（数据模型）
 │   ├── __init__.py
 │   ├── system_models.py        # SystemInfo, ProcessInfo, NetworkConnection
 │   └── utils.py                # 工具函数：format_bytes, format_frequency
 │
-├── views/                      # 🎨 视图层（UI界面）
+├── views/                      # 视图层（UI界面）
 │   ├── __init__.py
 │   ├── main_window.py          # 主窗口和应用程序类
 │   ├── ui_components.py        # UI组件：卡片、表格等
 │   └── ui_utils.py             # UI工具：消息提示函数
 │
-├── controllers/                # 🎮 控制器层（业务逻辑）
+├── controllers/                # 控制器层（业务逻辑）
 │   ├── __init__.py
 │   ├── system_controller.py    # 系统监控控制器
 │   ├── process_controller.py   # 进程管理控制器
@@ -65,7 +65,7 @@ ProcessManager/
 │   ├── hardware_controller.py  # 硬件信息控制器
 │   └── traffic_controller.py   # 流量监控控制器
 │
-├── v1/                         # 📦 v1版本（经典版本，已归档）
+├── v1/                         # v1版本（经典版本，已归档）
 │   ├── main.py
 │   ├── styles.py
 │   ├── system_monitor.py
@@ -73,11 +73,11 @@ ProcessManager/
 │
 ├── requirements.txt            # 依赖包列表
 ├── README.md                   # 本文件
-├── MVC_ARCHITECTURE.md         # 📖 MVC架构详细说明
+├── MVC_ARCHITECTURE.md         # MVC架构详细说明
 └── OPTIMIZATION_SUMMARY.md     # 性能优化总结
 ```
 
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 - Python 3.8+
@@ -91,7 +91,7 @@ pip install -r requirements.txt
 
 ### 运行程序
 
-#### ✨ 推荐方式：使用MVC架构版本
+#### 推荐方式：使用MVC架构版本
 ```bash
 python app.py
 ```
@@ -108,7 +108,7 @@ python v1/main.py
 python views/main_window.py
 ```
 
-## 📖 架构说明
+## 架构说明
 
 本项目采用**标准MVC（Model-View-Controller）架构**：
 
@@ -124,7 +124,7 @@ python views/main_window.py
 用户操作 → View → Controller → psutil → Model → Controller → View → 显示
 ```
 
-## 🎯 使用说明
+## 使用说明
 
 ### 系统信息（默认界面）
 1. 启动后自动显示"系统信息"标签页
@@ -165,10 +165,10 @@ python views/main_window.py
    - 点击"刷新"按钮查看各进程的流量消耗
    - 显示每个进程的PID、进程名、连接数、读取和写入数据量
    - 按连接数降序排列，方便查看网络活跃的进程
-   - 💡 **注意**：需要以管理员权限运行程序才能查看详细的进程流量信息
+   - **注意**：需要以管理员权限运行程序才能查看详细的进程流量信息
    - 显示前50个进程（性能考虑）
 
-## ⚡ 性能优化
+## 性能优化
 
 - **启动速度**: < 1秒（优化后提升70-80%）
 - **延迟加载**: UI组件按需创建
@@ -177,14 +177,14 @@ python views/main_window.py
 
 详细优化说明请查看: [OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md)
 
-## 📋 技术栈
+## 技术栈
 
 - **GUI框架**: PySide6 (Qt6) - 原生界面
 - **系统监控**: psutil
 - **架构**: MVC
 - **Python版本**: 3.8+
 
-## ⚠️ 注意事项
+## 注意事项
 
 1. 某些功能可能需要管理员权限
 2. 进程详细信息（exe路径、线程数等）需要点击"详细信息"查看
@@ -193,7 +193,7 @@ python views/main_window.py
 5. 系统信息（CPU、内存、磁盘）会自动实时更新
 6. CPU使用率在前几次更新时可能不够精确
 
-## 🔧 故障排除
+## 故障排除
 
 **Q: 程序无法启动**  
 A: 确保已安装所有依赖：`pip install -r requirements.txt`
@@ -204,20 +204,20 @@ A: 权限不足，请以管理员身份运行
 **Q: 网络信息不完整**  
 A: 需要更高权限访问，请以管理员身份运行
 
-## 📝 开发信息
+## 开发信息
 
 - **版本**: v3.0 (MVC架构)
 - **开发语言**: Python 3.8+
 - **架构模式**: MVC
 - **最后更新**: 2025-10-18
 
-## 📜 许可证
+## 许可证
 
 本项目仅供学习和个人使用。
 
 ---
 
-**Enjoy monitoring your system!** 🚀
+**Enjoy monitoring your system!**
 
 **查看更多**:
 - [MVC架构详细说明](MVC_ARCHITECTURE.md)

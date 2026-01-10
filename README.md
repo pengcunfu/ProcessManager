@@ -34,6 +34,13 @@
 - 大字体速度显示，清晰易读
 - 注意：查看进程流量详情需要管理员权限
 
+### 高级监控
+- **温度监控**：CPU温度、硬盘温度等硬件温度监控，带有警告和严重阈值提示
+- **电池监控**：电池电量、充电状态、剩余使用时间估算（笔记本专用）
+- **系统服务监控**：Windows服务列表、服务状态查看
+- **GPU监控**：GPU使用率、显存使用情况（开发中）
+- **计划任务**：Windows计划任务列表（开发中）
+
 ### 现代化界面
 - 原生PySide6界面设计
 - 简洁清爽的UI风格
@@ -63,7 +70,8 @@ ProcessManager/
 │   ├── process_controller.py   # 进程管理控制器
 │   ├── network_controller.py   # 网络监控控制器
 │   ├── hardware_controller.py  # 硬件信息控制器
-│   └── traffic_controller.py   # 流量监控控制器
+│   ├── traffic_controller.py   # 流量监控控制器
+│   └── advanced_monitor_controller.py  # 高级监控控制器（温度、电池、服务）
 │
 ├── v1/                         # v1版本（经典版本，已归档）
 │   ├── main.py

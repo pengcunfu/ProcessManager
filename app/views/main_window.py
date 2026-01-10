@@ -21,6 +21,7 @@ from app.controllers import (
     HardwareController,
     TrafficMonitorController
 )
+from app.controllers.advanced_monitor_controller import AdvancedMonitorController
 from app.views.ui_components import (
     SystemOverviewCard,
     ProcessTableCard,
@@ -29,7 +30,10 @@ from app.views.ui_components import (
     HardwareInfoDialog,
     SystemStatsCard,
     TrafficMonitorCard,
-    ProcessTrafficCard
+    ProcessTrafficCard,
+    TemperatureMonitorCard,
+    BatteryMonitorCard,
+    ServicesMonitorCard
 )
 from app.views.ui_utils import (
     show_success_message,
@@ -138,6 +142,44 @@ class TrafficInterface(QWidget):
         self.process_traffic_card.update_process_traffic(traffic_list)
 
 
+class AdvancedMonitorInterface(QWidget):
+    """高级监控界面"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+
+    def init_ui(self):
+        """初始化界面"""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        # 温度监控卡片
+        self.temperature_card = TemperatureMonitorCard()
+        layout.addWidget(self.temperature_card)
+
+        # 电池监控卡片
+        self.battery_card = BatteryMonitorCard()
+        layout.addWidget(self.battery_card)
+
+        # 系统服务监控卡片
+        self.services_card = ServicesMonitorCard()
+        layout.addWidget(self.services_card)
+
+    def update_temperature(self, temp_info):
+        """更新温度信息"""
+        self.temperature_card.update_temperature(temp_info)
+
+    def update_battery(self, battery_info):
+        """更新电池信息"""
+        self.battery_card.update_battery(battery_info)
+
+    def update_services(self, services):
+        """更新服务列表"""
+        self.services_card.update_services(services)
+
+
 class MainWindow(QMainWindow):
     """系统监控主窗口（MVC架构）"""
     
@@ -173,6 +215,7 @@ class MainWindow(QMainWindow):
         self.network_controller = NetworkController()
         self.hardware_controller = HardwareController()
         self.traffic_controller = TrafficMonitorController()
+        self.advanced_controller = AdvancedMonitorController()
     
     def init_ui(self):
         """初始化界面"""
@@ -191,12 +234,14 @@ class MainWindow(QMainWindow):
         self.process_interface = ProcessInterface()
         self.network_interface = NetworkInterface()
         self.traffic_interface = TrafficInterface()
-        
+        self.advanced_interface = AdvancedMonitorInterface()
+
         # 添加标签页
         self.tab_widget.addTab(self.system_interface, "系统信息")
         self.tab_widget.addTab(self.process_interface, "进程管理")
         self.tab_widget.addTab(self.network_interface, "网络监控")
         self.tab_widget.addTab(self.traffic_interface, "流量监控")
+        self.tab_widget.addTab(self.advanced_interface, "高级监控")
         
         layout.addWidget(self.tab_widget)
         
@@ -244,12 +289,12 @@ class MainWindow(QMainWindow):
         # 系统监控信号
         self.system_controller.system_info_updated.connect(self.on_system_info_updated)
         self.system_controller.error_occurred.connect(self.on_error)
-        
+
         # 进程管理信号
         self.process_controller.processes_updated.connect(self.on_processes_updated)
         self.process_controller.process_killed.connect(self.on_process_killed)
         self.process_controller.error_occurred.connect(self.on_error)
-        
+
         # 网络监控信号
         self.network_controller.connections_updated.connect(self.on_connections_updated)
         self.network_controller.error_occurred.connect(self.on_error)
@@ -258,7 +303,13 @@ class MainWindow(QMainWindow):
         self.traffic_controller.traffic_updated.connect(self.on_traffic_updated)
         self.traffic_controller.process_traffic_updated.connect(self.on_process_traffic_updated)
         self.traffic_controller.error_occurred.connect(self.on_error)
-        
+
+        # 高级监控信号
+        self.advanced_controller.temperature_updated.connect(self.on_temperature_updated)
+        self.advanced_controller.battery_updated.connect(self.on_battery_updated)
+        self.advanced_controller.services_updated.connect(self.on_services_updated)
+        self.advanced_controller.error_occurred.connect(self.on_error)
+
         # 界面组件信号
         self.process_interface.process_card.refresh_requested.connect(self.refresh_processes)
         self.process_interface.process_card.kill_requested.connect(self.kill_process)
@@ -266,24 +317,27 @@ class MainWindow(QMainWindow):
         self.network_interface.network_card.refresh_requested.connect(self.refresh_network)
 
         self.traffic_interface.process_traffic_card.refresh_requested.connect(self.refresh_process_traffic)
+
+        self.advanced_interface.temperature_card.refresh_requested.connect(self.refresh_temperature)
+        self.advanced_interface.battery_card.refresh_requested.connect(self.refresh_battery)
+        self.advanced_interface.services_card.refresh_requested.connect(self.refresh_services)
     
     def start_monitoring(self):
         """开始监控"""
         # 启动系统监控（自动刷新）
         self.system_controller.start_monitoring()
-        
+
         # 启动流量监控（自动刷新）
         self.traffic_controller.start_monitoring(interval=1000)  # 每1秒更新一次流量
-        
-        # 定时刷新硬件信息（仅硬件信息自动刷新）
-        self.refresh_timer = QTimer()
-        self.refresh_timer.timeout.connect(self.refresh_hardware)
-        self.refresh_timer.start(10000)  # 每10秒刷新一次硬件信息
-        
+
         # 初始加载数据（仅加载一次）
-        QTimer.singleShot(200, self.refresh_hardware)
         QTimer.singleShot(500, self.refresh_processes_once)
         QTimer.singleShot(1000, self.refresh_network_once)
+
+        # 初始加载高级监控数据
+        QTimer.singleShot(1500, self.refresh_temperature)
+        QTimer.singleShot(1500, self.refresh_battery)
+        QTimer.singleShot(2000, self.refresh_services)
     
     def refresh_processes_once(self):
         """初始加载进程列表（仅一次）"""
@@ -362,11 +416,39 @@ class MainWindow(QMainWindow):
     def on_process_traffic_updated(self, traffic_list):
         """进程流量更新"""
         self.traffic_interface.update_process_traffic(traffic_list)
-    
+
     def refresh_process_traffic(self):
         """刷新进程流量"""
         self.traffic_controller.get_process_traffic()
-    
+
+    # 高级监控信号处理
+    def on_temperature_updated(self, temp_info):
+        """温度信息更新"""
+        self.advanced_interface.update_temperature(temp_info)
+
+    def on_battery_updated(self, battery_info):
+        """电池信息更新"""
+        self.advanced_interface.update_battery(battery_info)
+
+    def on_services_updated(self, services):
+        """服务列表更新"""
+        self.advanced_interface.update_services(services)
+
+    def refresh_temperature(self):
+        """刷新温度信息"""
+        self.advanced_controller.get_temperature_info()
+        self.status_bar.showMessage("温度信息已刷新", 2000)
+
+    def refresh_battery(self):
+        """刷新电池信息"""
+        self.advanced_controller.get_battery_info()
+        self.status_bar.showMessage("电池信息已刷新", 2000)
+
+    def refresh_services(self):
+        """刷新服务列表"""
+        self.advanced_controller.get_services_info()
+        self.status_bar.showMessage("服务列表已刷新", 2000)
+
     def on_process_killed(self, pid: int, message: str):
         """进程结束成功"""
         show_success_message(self, message)

@@ -1,3 +1,7 @@
 psutil>=5.9.0
-PySide6>=6.5.0
+PySide6
 pywin32>=305; sys_platform == 'win32'
+wmi>=1.5.1; sys_platform == 'win32'
+nvidia-ml-py3>=7.352.0; sys_platform == 'win32'
+GPUtil>=1.4.0; sys_platform == 'win32'
+pyaudio>=0.2.12; sys_platform == 'win32'

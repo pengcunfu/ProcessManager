@@ -21,7 +21,6 @@ from app.controllers import (
     HardwareController,
     TrafficMonitorController
 )
-from app.controllers.advanced_monitor_controller import AdvancedMonitorController
 from app.views.ui_components import (
     SystemOverviewCard,
     ProcessTableCard,
@@ -183,32 +182,6 @@ class TrafficInterface(QWidget):
         self.process_traffic_card.update_process_traffic(traffic_list)
 
 
-class AdvancedMonitorInterface(QWidget):
-    """高级监控界面"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.init_ui()
-
-    def init_ui(self):
-        """初始化界面"""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-
-        # 高级监控页面预留，未来可以添加更多高级功能
-        # 目前已将温度监控和电池监控移至系统监控页面
-
-        # 添加一个提示标签
-        from PySide6.QtWidgets import QLabel
-        info_label = QLabel("高级监控功能\n\n温度监控和电池监控已移至\"系统监控\"页面")
-        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        info_label.setStyleSheet("color: #666; font-size: 14px; padding: 50px;")
-        layout.addWidget(info_label)
-
-        layout.addStretch()
-
-
 class ServicesInterface(QWidget):
     """系统服务管理界面"""
 
@@ -265,7 +238,6 @@ class MainWindow(QMainWindow):
         self.network_controller = NetworkController()
         self.hardware_controller = HardwareController()
         self.traffic_controller = TrafficMonitorController()
-        self.advanced_controller = AdvancedMonitorController()
     
     def init_ui(self):
         """初始化界面"""
@@ -285,7 +257,6 @@ class MainWindow(QMainWindow):
         self.process_interface = ProcessInterface()
         self.network_interface = NetworkInterface()
         self.traffic_interface = TrafficInterface()
-        self.advanced_interface = AdvancedMonitorInterface()
         self.services_interface = ServicesInterface()
 
         # 添加标签页
@@ -294,7 +265,6 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(self.process_interface, "进程管理")
         self.tab_widget.addTab(self.network_interface, "网络监控")
         self.tab_widget.addTab(self.traffic_interface, "流量监控")
-        self.tab_widget.addTab(self.advanced_interface, "高级监控")
         self.tab_widget.addTab(self.services_interface, "系统服务")
         
         layout.addWidget(self.tab_widget)
@@ -357,12 +327,6 @@ class MainWindow(QMainWindow):
         self.traffic_controller.traffic_updated.connect(self.on_traffic_updated)
         self.traffic_controller.process_traffic_updated.connect(self.on_process_traffic_updated)
         self.traffic_controller.error_occurred.connect(self.on_error)
-
-        # 高级监控信号
-        self.advanced_controller.temperature_updated.connect(self.on_temperature_updated)
-        self.advanced_controller.battery_updated.connect(self.on_battery_updated)
-        self.advanced_controller.services_updated.connect(self.on_services_updated)
-        self.advanced_controller.error_occurred.connect(self.on_error)
 
         # 界面组件信号
         self.process_interface.process_card.refresh_requested.connect(self.refresh_processes)
@@ -491,18 +455,112 @@ class MainWindow(QMainWindow):
 
     def refresh_temperature(self):
         """刷新温度信息"""
-        self.advanced_controller.get_temperature_info()
-        self.status_bar.showMessage("温度信息已刷新", 2000)
+        import psutil
+        try:
+            temp_info = {}
+            if hasattr(psutil, 'sensors_temperatures'):
+                temps = psutil.sensors_temperatures()
+                if temps:
+                    for name, entries in temps.items():
+                        temp_list = []
+                        for entry in entries:
+                            temp_data = {
+                                'label': entry.label or name,
+                                'current': entry.current,
+                                'high': entry.high,
+                                'critical': entry.critical
+                            }
+                            temp_list.append(temp_data)
+                        temp_info[name] = temp_list
+                else:
+                    temp_info['error'] = "未检测到温度传感器"
+            else:
+                temp_info['error'] = "当前系统不支持温度监控"
+            self.on_temperature_updated(temp_info)
+            self.status_bar.showMessage("温度信息已刷新", 2000)
+        except Exception as e:
+            self.on_error(f"获取温度信息失败: {str(e)}")
 
     def refresh_battery(self):
         """刷新电池信息"""
-        self.advanced_controller.get_battery_info()
-        self.status_bar.showMessage("电池信息已刷新", 2000)
+        import psutil
+        try:
+            battery_info = {}
+            if hasattr(psutil, 'sensors_battery'):
+                battery = psutil.sensors_battery()
+                if battery:
+                    battery_info = {
+                        'percent': battery.percent,
+                        'power_plugged': battery.power_plugged,
+                        'seconds_left': battery.secsleft if not battery.power_plugged else None,
+                    }
+                    if battery_info['seconds_left'] and battery_info['seconds_left'] != -1:
+                        hours = battery_info['seconds_left'] // 3600
+                        minutes = (battery_info['seconds_left'] % 3600) // 60
+                        battery_info['time_left_formatted'] = f"{hours}小时{minutes}分钟"
+                    else:
+                        battery_info['time_left_formatted'] = "正在充电或无法估算"
+                    battery_info['status'] = "充电中" if battery.power_plugged else "使用电池"
+                else:
+                    battery_info['error'] = "未检测到电池"
+            else:
+                battery_info['error'] = "当前系统不支持电池监控"
+            self.on_battery_updated(battery_info)
+            self.status_bar.showMessage("电池信息已刷新", 2000)
+        except Exception as e:
+            self.on_error(f"获取电池信息失败: {str(e)}")
 
     def refresh_services(self):
         """刷新服务列表"""
-        self.advanced_controller.get_services_info()
-        self.status_bar.showMessage("服务列表已刷新", 2000)
+        import platform
+        try:
+            services = []
+            if platform.system() == 'Windows':
+                try:
+                    import win32service
+                    import win32con
+
+                    hscm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+                    service_list = win32service.EnumServicesStatus(
+                        hscm,
+                        win32service.SERVICE_WIN32,
+                        win32service.SERVICE_STATE_ALL
+                    )
+                    win32service.CloseServiceHandle(hscm)
+
+                    for service in service_list[:100]:
+                        service_name = service[0]
+                        display_name = service[1]
+                        status_code = service[2][1]
+
+                        status_map = {
+                            win32service.SERVICE_STOPPED: "已停止",
+                            win32service.SERVICE_START_PENDING: "启动中",
+                            win32service.SERVICE_STOP_PENDING: "停止中",
+                            win32service.SERVICE_RUNNING: "运行中",
+                            win32service.SERVICE_CONTINUE_PENDING: "继续中",
+                            win32service.SERVICE_PAUSE_PENDING: "暂停中",
+                            win32service.SERVICE_PAUSED: "已暂停",
+                        }
+
+                        services.append({
+                            'name': service_name,
+                            'display_name': display_name,
+                            'status': status_map.get(status_code, "未知"),
+                            'status_code': status_code
+                        })
+
+                except ImportError:
+                    services = [{'error': '需要安装 pywin32 库'}]
+                except Exception as e:
+                    services = [{'error': f'获取服务失败: {str(e)}'}]
+            else:
+                services = [{'error': '仅支持Windows系统'}]
+
+            self.on_services_updated(services)
+            self.status_bar.showMessage("服务列表已刷新", 2000)
+        except Exception as e:
+            self.on_error(f"获取服务信息失败: {str(e)}")
 
     def on_process_killed(self, pid: int, message: str):
         """进程结束成功"""

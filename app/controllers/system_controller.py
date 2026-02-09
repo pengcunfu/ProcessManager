@@ -6,6 +6,7 @@
 """
 
 import psutil
+import platform
 from datetime import datetime
 from PySide6.QtCore import QObject, Signal, QTimer
 
@@ -87,7 +88,15 @@ class SystemMonitorController(QObject):
             
             # 网络IO统计
             net_io = psutil.net_io_counters()
-            
+
+            # 操作系统信息
+            system = platform.system()
+            node = platform.node()
+            release = platform.release()
+            version = platform.version()
+            machine = platform.machine()
+            processor = platform.processor()
+
             # 创建系统信息对象
             system_info = SystemInfo(
                 cpu_percent=cpu_percent,
@@ -104,7 +113,13 @@ class SystemMonitorController(QObject):
                 uptime=uptime_str,
                 process_count=process_count,
                 bytes_sent=net_io.bytes_sent,
-                bytes_recv=net_io.bytes_recv
+                bytes_recv=net_io.bytes_recv,
+                system=system,
+                node=node,
+                release=release,
+                version=version,
+                machine=machine,
+                processor=processor
             )
             
             self.system_info_updated.emit(system_info)

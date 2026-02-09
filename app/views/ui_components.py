@@ -94,33 +94,78 @@ class SystemStatsCard(StyledGroupBox):
         super().__init__("系统统计", parent)
         self.setFixedHeight(100)
         self.init_ui()
-    
+
     def init_ui(self):
         """初始化界面"""
         layout = QGridLayout(self)
-        
+
         # 启动时间
         self.boot_time_label = QLabel("启动时间: --")
         layout.addWidget(self.boot_time_label, 0, 0)
-        
+
         # 运行时间
         self.uptime_label = QLabel("运行时间: --")
         layout.addWidget(self.uptime_label, 0, 1)
-        
+
         # 进程数
         self.process_count_label = QLabel("进程数: --")
         layout.addWidget(self.process_count_label, 1, 0)
-        
+
         # CPU核心数
         self.cpu_count_label = QLabel("CPU核心: --")
         layout.addWidget(self.cpu_count_label, 1, 1)
-    
+
     def update_system_info(self, info: SystemInfo):
         """更新系统统计信息"""
         self.boot_time_label.setText(f"启动时间: {info.boot_time}")
         self.uptime_label.setText(f"运行时间: {info.uptime}")
         self.process_count_label.setText(f"进程数: {info.process_count}")
         self.cpu_count_label.setText(f"CPU核心: {info.cpu_count}")
+
+
+class SystemInfoCard(StyledGroupBox):
+    """系统详细信息卡片"""
+
+    def __init__(self, parent=None):
+        super().__init__("系统信息", parent)
+        self.init_ui()
+
+    def init_ui(self):
+        """初始化界面"""
+        layout = QGridLayout(self)
+
+        # 操作系统
+        self.system_label = QLabel("操作系统: --")
+        layout.addWidget(self.system_label, 0, 0)
+
+        # 节点名
+        self.node_label = QLabel("节点名: --")
+        layout.addWidget(self.node_label, 0, 1)
+
+        # 发行版本
+        self.release_label = QLabel("发行版本: --")
+        layout.addWidget(self.release_label, 1, 0)
+
+        # 版本号
+        self.version_label = QLabel("版本号: --")
+        layout.addWidget(self.version_label, 1, 1)
+
+        # 架构
+        self.machine_label = QLabel("架构: --")
+        layout.addWidget(self.machine_label, 2, 0)
+
+        # 处理器
+        self.processor_label = QLabel("处理器: --")
+        layout.addWidget(self.processor_label, 2, 1)
+
+    def update_system_info(self, info: SystemInfo):
+        """更新系统信息"""
+        self.system_label.setText(f"操作系统: {info.system or 'N/A'}")
+        self.node_label.setText(f"节点名: {info.node or 'N/A'}")
+        self.release_label.setText(f"发行版本: {info.release or 'N/A'}")
+        self.version_label.setText(f"版本号: {info.version or 'N/A'}")
+        self.machine_label.setText(f"架构: {info.machine or 'N/A'}")
+        self.processor_label.setText(f"处理器: {info.processor or 'N/A'}")
 
 
 class ProcessTableCard(StyledGroupBox):

@@ -29,6 +29,7 @@ from app.views.ui_components import (
     HardwareInfoCard,
     HardwareInfoDialog,
     SystemStatsCard,
+    SystemInfoCard,
     TrafficMonitorCard,
     ProcessTrafficCard,
     TemperatureMonitorCard,
@@ -58,6 +59,10 @@ class SystemInfoInterface(QWidget):
         self.overview_card = SystemOverviewCard()
         layout.addWidget(self.overview_card)
 
+        # 系统信息卡片
+        self.system_info_card = SystemInfoCard()
+        layout.addWidget(self.system_info_card)
+
         # 系统统计卡片
         self.stats_card = SystemStatsCard()
         layout.addWidget(self.stats_card)
@@ -67,6 +72,7 @@ class SystemInfoInterface(QWidget):
     def update_system_info(self, system_info):
         """更新系统信息"""
         self.overview_card.update_system_info(system_info)
+        self.system_info_card.update_system_info(system_info)
         self.stats_card.update_system_info(system_info)
 
 

@@ -27,6 +27,13 @@ class SystemInfo:
     process_count: int
     bytes_sent: int = 0
     bytes_recv: int = 0
+    # 操作系统信息
+    system: str = ""
+    node: str = ""
+    release: str = ""
+    version: str = ""
+    machine: str = ""
+    processor: str = ""
 
 
 @dataclass

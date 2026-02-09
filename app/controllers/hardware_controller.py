@@ -600,17 +600,17 @@ class HardwareController(QObject):
                     # 获取键盘
                     for keyboard in c.Win32_Keyboard():
                         input_devices['keyboards'].append({
-                            'name': keyboard.Name,
-                            'description': keyboard.Description,
+                            'name': getattr(keyboard, 'Name', 'Unknown'),
+                            'description': getattr(keyboard, 'Description', 'Unknown'),
                             'status': '正常'
                         })
 
                     # 获取鼠标/指针设备
                     for mouse in c.Win32_PointingDevice():
                         input_devices['mice'].append({
-                            'name': mouse.Name,
-                            'description': mouse.Description,
-                            'device_type': mouse.DeviceType,
+                            'name': getattr(mouse, 'Name', 'Unknown'),
+                            'description': getattr(mouse, 'Description', 'Unknown'),
+                            'device_type': getattr(mouse, 'DeviceType', 'Unknown'),
                             'status': '正常'
                         })
 

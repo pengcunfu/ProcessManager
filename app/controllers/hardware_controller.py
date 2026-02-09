@@ -139,6 +139,18 @@ class HardwareController(QObject):
             # 电池信息（如果有）
             hardware_info['battery'] = self._get_battery_info()
 
+            # 音频设备信息
+            hardware_info['audio'] = self._get_audio_devices()
+
+            # 蓝牙设备信息
+            hardware_info['bluetooth'] = self._get_bluetooth_devices()
+
+            # USB设备信息
+            hardware_info['usb_devices'] = self._get_usb_devices()
+
+            # 键盘鼠标信息
+            hardware_info['input_devices'] = self._get_keyboard_mouse_info()
+
             return hardware_info
 
         except Exception as e:
@@ -388,6 +400,236 @@ class HardwareController(QObject):
             battery_info['error'] = str(e)
 
         return battery_info if battery_info else {'message': '未检测到电池信息'}
+
+    def _get_audio_devices(self) -> Dict:
+        """获取音频设备信息"""
+        audio_info = {'input_devices': [], 'output_devices': []}
+
+        try:
+            if platform.system() == 'Windows':
+                try:
+                    import pyaudio
+                    p = pyaudio.PyAudio()
+
+                    for i in range(p.get_device_count()):
+                        info = p.get_device_info_by_index(i)
+                        device = {
+                            'name': info.get('name', 'Unknown'),
+                            'channels': info.get('maxInputChannels', 0) if info.get('maxInputChannels', 0) > 0 else info.get('maxOutputChannels', 0),
+                            'sample_rate': int(info.get('defaultSampleRate', 0)),
+                        }
+
+                        if info.get('maxInputChannels', 0) > 0:
+                            audio_info['input_devices'].append(device)
+                        if info.get('maxOutputChannels', 0) > 0:
+                            audio_info['output_devices'].append(device)
+
+                    p.terminate()
+                except ImportError:
+                    audio_info['message'] = '需要安装 pyaudio 库'
+                except Exception as e:
+                    audio_info['error'] = f"获取音频设备失败: {str(e)}"
+            else:
+                audio_info['message'] = f"{platform.system()} 系统音频设备获取待实现"
+
+        except Exception as e:
+            audio_info['error'] = str(e)
+
+        return audio_info
+
+    def _get_bluetooth_devices(self) -> List[Dict]:
+        """获取蓝牙设备信息"""
+        bluetooth_devices = []
+
+        try:
+            if platform.system() == 'Windows':
+                try:
+                    import wmi
+                    c = wmi.WMI()
+
+                    # 获取蓝牙无线电设备
+                    for radio in c.Win32_PnPEntity(DeviceID="*BTH*"):
+                        device = {
+                            'name': radio.Name,
+                            'device_id': radio.DeviceID,
+                            'status': '已连接' if radio.Status else '未连接',
+                            'type': '蓝牙适配器'
+                        }
+                        bluetooth_devices.append(device)
+
+                    # 获取配对的蓝牙设备
+                    try:
+                        import win32com.client
+                        shell = win32com.client.Dispatch("WScript.Shell")
+                        # 尝试获取蓝牙设备信息
+                        for device in c.Win32_PnPEntity():
+                            if 'Bluetooth' in device.Name or 'bluetooth' in device.Name:
+                                bluetooth_devices.append({
+                                    'name': device.Name,
+                                    'device_id': device.DeviceID,
+                                    'type': '蓝牙设备'
+                                })
+                    except:
+                        pass
+
+                    if not bluetooth_devices:
+                        bluetooth_devices.append({'message': '未检测到蓝牙设备'})
+
+                except ImportError:
+                    bluetooth_devices.append({'message': '需要安装 wmi 和 pywin32 库'})
+                except Exception as e:
+                    bluetooth_devices.append({'error': f"获取蓝牙设备失败: {str(e)}"})
+            else:
+                # Linux 下尝试获取蓝牙设备
+                try:
+                    result = subprocess.run(['bluetoothctl', 'list'], capture_output=True, text=True, timeout=2)
+                    if result.returncode == 0:
+                        bluetooth_devices.append({'message': 'Linux 蓝牙设备检测功能开发中'})
+                    else:
+                        bluetooth_devices.append({'message': '未检测到蓝牙适配器'})
+                except:
+                    bluetooth_devices.append({'message': f'{platform.system()} 系统蓝牙设备检测待实现'})
+
+        except Exception as e:
+            bluetooth_devices.append({'error': str(e)})
+
+        return bluetooth_devices if bluetooth_devices else [{'message': '未检测到蓝牙设备'}]
+
+    def _get_usb_devices(self) -> List[Dict]:
+        """获取USB设备信息（包括鼠标、键盘等）"""
+        usb_devices = []
+
+        try:
+            if platform.system() == 'Windows':
+                try:
+                    import wmi
+                    c = wmi.WMI()
+
+                    # 获取USB设备
+                    for device in c.Win32_USBController():
+                        usb_devices.append({
+                            'name': device.Name,
+                            'device_id': device.DeviceID,
+                            'type': 'USB控制器',
+                            'status': '正常'
+                        })
+
+                    # 获取连接的USB设备（人机接口设备）
+                    hid_devices = []
+                    for device in c.Win32_PnPEntity():
+                        device_name = device.Name or ''
+                        # 过滤出鼠标、键盘等HID设备
+                        if any(keyword in device_name.lower() for keyword in ['mouse', 'keyboard', 'hid', 'usb', 'input']):
+                            device_type = '其他'
+                            if 'mouse' in device_name.lower():
+                                device_type = '鼠标'
+                            elif 'keyboard' in device_name.lower() or 'kbd' in device_name.lower():
+                                device_type = '键盘'
+                            elif 'hid' in device_name.lower():
+                                device_type = '人机接口设备'
+                            elif 'usb' in device_name.lower():
+                                device_type = 'USB设备'
+
+                            hid_devices.append({
+                                'name': device_name,
+                                'device_id': device.DeviceID,
+                                'type': device_type,
+                                'status': '已连接' if device.Status else '未连接',
+                                'manufacturer': getattr(device, 'Manufacturer', 'Unknown')
+                            })
+
+                    # 去重并添加
+                    seen_ids = set()
+                    for device in hid_devices:
+                        if device['device_id'] not in seen_ids:
+                            usb_devices.append(device)
+                            seen_ids.add(device['device_id'])
+
+                    if not usb_devices:
+                        usb_devices.append({'message': '未检测到USB设备'})
+
+                except ImportError:
+                    usb_devices.append({'message': '需要安装 wmi 和 pywin32 库'})
+                except Exception as e:
+                    usb_devices.append({'error': f"获取USB设备失败: {str(e)}"})
+            else:
+                # Linux 下读取USB设备信息
+                try:
+                    usb_info = []
+                    # 读取/sys/bus/usb/devices/
+                    import os
+                    usb_path = '/sys/bus/usb/devices/'
+                    if os.path.exists(usb_path):
+                        for device_dir in os.listdir(usb_path):
+                            if device_dir.startswith('usb') or ':' in device_dir:
+                                continue
+                            try:
+                                with open(os.path.join(usb_path, device_dir, 'product'), 'r') as f:
+                                    name = f.read().strip()
+                                with open(os.path.join(usb_path, device_dir, 'idVendor'), 'r') as f:
+                                    vendor = f.read().strip()
+                                usb_devices.append({
+                                    'name': name,
+                                    'vendor_id': vendor,
+                                    'type': 'USB设备'
+                                })
+                            except:
+                                pass
+
+                    if not usb_devices:
+                        usb_devices.append({'message': '未检测到USB设备信息'})
+
+                except Exception as e:
+                    usb_devices.append({'error': f"获取USB设备失败: {str(e)}"})
+
+        except Exception as e:
+            usb_devices.append({'error': str(e)})
+
+        return usb_devices if usb_devices else [{'message': '未检测到USB设备'}]
+
+    def _get_keyboard_mouse_info(self) -> Dict:
+        """获取键盘鼠标信息"""
+        input_devices = {'keyboards': [], 'mice': []}
+
+        try:
+            if platform.system() == 'Windows':
+                try:
+                    import wmi
+                    c = wmi.WMI()
+
+                    # 获取键盘
+                    for keyboard in c.Win32_Keyboard():
+                        input_devices['keyboards'].append({
+                            'name': keyboard.Name,
+                            'description': keyboard.Description,
+                            'status': '正常'
+                        })
+
+                    # 获取鼠标/指针设备
+                    for mouse in c.Win32_PointingDevice():
+                        input_devices['mice'].append({
+                            'name': mouse.Name,
+                            'description': mouse.Description,
+                            'device_type': mouse.DeviceType,
+                            'status': '正常'
+                        })
+
+                    if not input_devices['keyboards']:
+                        input_devices['keyboards'].append({'message': '未检测到键盘'})
+                    if not input_devices['mice']:
+                        input_devices['mice'].append({'message': '未检测到鼠标'})
+
+                except ImportError:
+                    input_devices['message'] = '需要安装 wmi 和 pywin32 库'
+                except Exception as e:
+                    input_devices['error'] = f"获取输入设备失败: {str(e)}"
+            else:
+                input_devices['message'] = f"{platform.system()} 系统输入设备检测待实现"
+
+        except Exception as e:
+            input_devices['error'] = str(e)
+
+        return input_devices
 
     def get_hardware_info_sync(self) -> Dict:
         """同步获取硬件信息（用于对话框，仍会阻塞）"""

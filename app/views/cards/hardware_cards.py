@@ -152,6 +152,37 @@ class HardwareInfoCard(StyledGroupBox):
                         info_lines.append(f"剩余时间: {battery.get('time_left_formatted', 'N/A')}")
                     info_lines.append("")
 
+            # 音频设备
+            if 'audio' in hardware_info:
+                audio = hardware_info['audio']
+                if audio.get('output_devices'):
+                    info_lines.append("=== 音频设备 ===")
+                    info_lines.append(f"输出设备: {len(audio.get('output_devices', []))} 个")
+                    for device in audio.get('output_devices', [])[:2]:
+                        info_lines.append(f"  - {device.get('name', 'N/A')}")
+                    info_lines.append("")
+
+            # 蓝牙设备
+            if 'bluetooth' in hardware_info:
+                bt = hardware_info['bluetooth']
+                if bt and 'message' not in bt[0]:
+                    info_lines.append("=== 蓝牙设备 ===")
+                    for device in bt[:3]:
+                        if 'error' not in device:
+                            info_lines.append(f"  - {device.get('name', 'N/A')}")
+                    info_lines.append("")
+
+            # 输入设备
+            if 'input_devices' in hardware_info:
+                input_dev = hardware_info['input_devices']
+                keyboards = input_dev.get('keyboards', [])
+                mice = input_dev.get('mice', [])
+                if keyboards and 'message' not in keyboards[0]:
+                    info_lines.append("=== 输入设备 ===")
+                    info_lines.append(f"键盘: {len(keyboards)} 个")
+                    info_lines.append(f"鼠标: {len(mice)} 个")
+                    info_lines.append("")
+
         except Exception as e:
             info_lines.append(f"显示硬件信息时出错: {e}")
 
@@ -194,6 +225,14 @@ class HardwareInfoDialog(QDialog):
         self.network_text = self.create_tab("网络接口", "network")
         # 电池信息标签页
         self.battery_text = self.create_tab("电池信息", "battery")
+        # 音频设备标签页
+        self.audio_text = self.create_tab("音频设备", "audio")
+        # 蓝牙设备标签页
+        self.bluetooth_text = self.create_tab("蓝牙设备", "bluetooth")
+        # USB设备标签页
+        self.usb_text = self.create_tab("USB设备", "usb")
+        # 输入设备标签页
+        self.input_text = self.create_tab("键盘鼠标", "input")
 
         # 按钮区域
         button_layout = QHBoxLayout()
@@ -254,6 +293,18 @@ class HardwareInfoDialog(QDialog):
 
         # 更新电池信息
         self.update_battery_info(hardware_info.get('battery', {}))
+
+        # 更新音频设备信息
+        self.update_audio_info(hardware_info.get('audio', {}))
+
+        # 更新蓝牙设备信息
+        self.update_bluetooth_info(hardware_info.get('bluetooth', []))
+
+        # 更新USB设备信息
+        self.update_usb_info(hardware_info.get('usb_devices', []))
+
+        # 更新输入设备信息
+        self.update_input_info(hardware_info.get('input_devices', {}))
 
     def update_cpu_info(self, cpu_info: dict):
         """更新CPU信息"""
@@ -548,6 +599,176 @@ class HardwareInfoDialog(QDialog):
             info_lines.append(f"<p style='color: red;'>显示电池信息时出错: {e}</p>")
 
         self.battery_text.setHtml("".join(info_lines))
+
+    def update_audio_info(self, audio: dict):
+        """更新音频设备信息"""
+        info_lines = []
+
+        try:
+            info_lines.append("<h2>音频设备</h2>")
+
+            if 'error' in audio:
+                info_lines.append(f"<p style='color: red;'>{audio['error']}</p>")
+            elif 'message' in audio:
+                info_lines.append(f"<p>{audio['message']}</p>")
+            else:
+                info_lines.append("<h3>输出设备</h3>")
+                output_devices = audio.get('output_devices', [])
+                if output_devices:
+                    info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                    for idx, device in enumerate(output_devices, 1):
+                        info_lines.append(f"<tr><td style='width: 10%; background-color: #f0f0f0;'><b>{idx}</b></td>")
+                        info_lines.append(f"<td style='width: 40%;'>{device.get('name', 'N/A')}</td>")
+                        info_lines.append(f"<td>声道: {device.get('channels', 'N/A')}</td>")
+                        info_lines.append(f"<td>采样率: {device.get('sample_rate', 0)} Hz</td></tr>")
+                    info_lines.append("</table>")
+                else:
+                    info_lines.append("<p>未检测到输出设备</p>")
+
+                info_lines.append("<h3>输入设备</h3>")
+                input_devices = audio.get('input_devices', [])
+                if input_devices:
+                    info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                    for idx, device in enumerate(input_devices, 1):
+                        info_lines.append(f"<tr><td style='width: 10%; background-color: #f0f0f0;'><b>{idx}</b></td>")
+                        info_lines.append(f"<td style='width: 40%;'>{device.get('name', 'N/A')}</td>")
+                        info_lines.append(f"<td>声道: {device.get('channels', 'N/A')}</td>")
+                        info_lines.append(f"<td>采样率: {device.get('sample_rate', 0)} Hz</td></tr>")
+                    info_lines.append("</table>")
+                else:
+                    info_lines.append("<p>未检测到输入设备</p>")
+
+                if not output_devices and not input_devices:
+                    info_lines.append("<p style='color: #666; font-size: 12px;'>提示: 安装 pyaudio 可获取详细音频设备信息</p>")
+
+        except Exception as e:
+            info_lines.append(f"<p style='color: red;'>显示音频设备信息时出错: {e}</p>")
+
+        self.audio_text.setHtml("".join(info_lines))
+
+    def update_bluetooth_info(self, bluetooth: list):
+        """更新蓝牙设备信息"""
+        info_lines = []
+
+        try:
+            info_lines.append("<h2>蓝牙设备</h2>")
+
+            if not bluetooth or ('message' in bluetooth[0]):
+                info_lines.append("<p>未检测到蓝牙设备</p>")
+            else:
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+
+                for idx, device in enumerate(bluetooth, 1):
+                    if 'error' in device:
+                        info_lines.append(f"<tr><td colspan='3' style='color: red;'>{device['error']}</td></tr>")
+                        continue
+
+                    info_lines.append(f"<tr><td style='width: 5%; background-color: #f0f0f0;'><b>{idx}</b></td>")
+                    info_lines.append(f"<td style='width: 40%;'><b>{device.get('name', 'N/A')}</b></td>")
+                    info_lines.append(f"<td>{device.get('type', 'N/A')}</td></tr>")
+
+                    if device.get('status'):
+                        status_color = "green" if device['status'] == '已连接' else "#666"
+                        info_lines.append(f"<tr><td></td><td colspan='2' style='color: {status_color};'>状态: {device.get('status', 'N/A')}</td></tr>")
+
+                    if device.get('device_id'):
+                        info_lines.append(f"<tr><td></td><td colspan='2' style='font-size: 11px; color: #999;'>ID: {device.get('device_id', 'N/A')[:50]}</td></tr>")
+                    info_lines.append(f"<tr><td colspan='3' style='padding: 5px;'></td></tr>")
+
+                info_lines.append("</table>")
+
+        except Exception as e:
+            info_lines.append(f"<p style='color: red;'>显示蓝牙设备信息时出错: {e}</p>")
+
+        self.bluetooth_text.setHtml("".join(info_lines))
+
+    def update_usb_info(self, usb_devices: list):
+        """更新USB设备信息"""
+        info_lines = []
+
+        try:
+            info_lines.append("<h2>USB设备</h2>")
+
+            if not usb_devices or ('message' in usb_devices[0]):
+                info_lines.append("<p>未检测到USB设备</p>")
+            else:
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                info_lines.append("<tr><th style='background-color: #f0f0f0;'>设备名称</th><th style='background-color: #f0f0f0;'>类型</th><th style='background-color: #f0f0f0;'>状态</th></tr>")
+
+                for idx, device in enumerate(usb_devices[:50], 1):  # 限制显示前50个
+                    if 'error' in device:
+                        continue
+                    if 'message' in device:
+                        info_lines.append(f"<tr><td colspan='3'>{device['message']}</td></tr>")
+                        continue
+
+                    device_type = device.get('type', 'USB设备')
+                    bg_color = "#E8F5E9" if '鼠标' in device_type or '键盘' in device_type else "#fff"
+
+                    info_lines.append(f"<tr style='background-color: {bg_color};'>")
+                    info_lines.append(f"<td>{device.get('name', 'N/A')}</td>")
+                    info_lines.append(f"<td>{device_type}</td>")
+                    info_lines.append(f"<td>{device.get('status', 'N/A')}</td></tr>")
+
+                if len(usb_devices) > 50:
+                    info_lines.append(f"<tr><td colspan='3' style='text-align: center; color: #666;'>... 还有 {len(usb_devices) - 50} 个设备未显示</td></tr>")
+
+                info_lines.append("</table>")
+
+        except Exception as e:
+            info_lines.append(f"<p style='color: red;'>显示USB设备信息时出错: {e}</p>")
+
+        self.usb_text.setHtml("".join(info_lines))
+
+    def update_input_info(self, input_devices: dict):
+        """更新输入设备信息"""
+        info_lines = []
+
+        try:
+            info_lines.append("<h2>键盘与鼠标</h2>")
+
+            if 'error' in input_devices:
+                info_lines.append(f"<p style='color: red;'>{input_devices['error']}</p>")
+            elif 'message' in input_devices:
+                info_lines.append(f"<p>{input_devices['message']}</p>")
+            else:
+                # 键盘信息
+                keyboards = input_devices.get('keyboards', [])
+                info_lines.append("<h3>键盘</h3>")
+                if keyboards and 'message' not in keyboards[0]:
+                    info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                    for idx, keyboard in enumerate(keyboards, 1):
+                        info_lines.append("<tr><td style='width: 5%; background-color: #f0f0f0;'><b>⌨</b></td>")
+                        info_lines.append(f"<td style='width: 45%;'><b>{keyboard.get('name', 'N/A')}</b></td>")
+                        info_lines.append(f"<td>{keyboard.get('status', 'N/A')}</td></tr>")
+                        if keyboard.get('description'):
+                            info_lines.append(f"<tr><td></td><td colspan='2' style='font-size: 11px; color: #666;'>{keyboard.get('description', 'N/A')}</td></tr>")
+                    info_lines.append("</table>")
+                else:
+                    info_lines.append("<p>未检测到键盘</p>")
+
+                # 鼠标信息
+                mice = input_devices.get('mice', [])
+                info_lines.append("<h3>鼠标</h3>")
+                if mice and 'message' not in mice[0]:
+                    info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                    for idx, mouse in enumerate(mice, 1):
+                        info_lines.append("<tr><td style='width: 5%; background-color: #f0f0f0;'><b>🖱</b></td>")
+                        info_lines.append(f"<td style='width: 45%;'><b>{mouse.get('name', 'N/A')}</b></td>")
+                        info_lines.append(f"<td>{mouse.get('status', 'N/A')}</td></tr>")
+                        if mouse.get('description'):
+                            info_lines.append(f"<tr><td></td><td colspan='2' style='font-size: 11px; color: #666;'>{mouse.get('description', 'N/A')}</td></tr>")
+                    info_lines.append("</table>")
+                else:
+                    info_lines.append("<p>未检测到鼠标</p>")
+
+                if not keyboards and not mice:
+                    info_lines.append("<p style='color: #666; font-size: 12px;'>提示: 安装 wmi 和 pywin32 可获取详细输入设备信息</p>")
+
+        except Exception as e:
+            info_lines.append(f"<p style='color: red;'>显示输入设备信息时出错: {e}</p>")
+
+        self.input_text.setHtml("".join(info_lines))
 
     def refresh_info(self):
         """刷新硬件信息（由主窗口调用）"""

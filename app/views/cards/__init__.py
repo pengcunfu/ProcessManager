@@ -1,32 +1,39 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-UI组件
-使用原生PySide6创建界面组件
-
-注意：此文件保留用于向后兼容，所有组件已拆分到 cards 子模块中
+Cards包 - UI卡片组件模块
 """
 
-# 从 cards 子模块导入所有组件
-from app.views.cards import (
-    # 系统监控
+# 系统监控相关卡片
+from .system_cards import (
     SystemOverviewCard,
     SystemStatsCard,
-    SystemInfoCard,
-    # 进程管理
-    ProcessTableCard,
-    # 网络监控
-    NetworkTableCard,
-    # 硬件信息
+    SystemInfoCard
+)
+
+# 进程管理相关卡片
+from .process_cards import ProcessTableCard
+
+# 网络监控相关卡片
+from .network_cards import NetworkTableCard
+
+# 硬件信息相关卡片
+from .hardware_cards import (
     HardwareInfoCard,
-    HardwareInfoDialog,
-    # 流量监控
+    HardwareInfoDialog
+)
+
+# 流量监控相关卡片
+from .traffic_cards import (
     TrafficMonitorCard,
-    ProcessTrafficCard,
-    # 高级监控
+    ProcessTrafficCard
+)
+
+# 高级监控相关卡片
+from .advanced_cards import (
     TemperatureMonitorCard,
     BatteryMonitorCard,
-    ServicesMonitorCard,
+    ServicesMonitorCard
 )
 
 __all__ = [

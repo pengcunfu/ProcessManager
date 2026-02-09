@@ -5,7 +5,7 @@ Models包 - 数据模型层
 """
 
 from .system_models import SystemInfo, ProcessInfo, NetworkConnection
-from .utils import format_bytes, format_frequency
+from app.utils import format_bytes, format_frequency
 
 __all__ = [
     'SystemInfo',
@@ -14,4 +14,3 @@ __all__ = [
     'format_bytes',
     'format_frequency'
 ]
-

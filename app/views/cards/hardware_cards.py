@@ -14,6 +14,26 @@ from app.models import format_bytes, format_frequency
 from app.views.ui_utils import StyledButton, StyledGroupBox
 
 
+def format_seconds(seconds: float) -> str:
+    """格式化时间（秒）为可读格式"""
+    if seconds >= 86400:
+        days = seconds / 86400
+        return f"{days:.1f} 天"
+    elif seconds >= 3600:
+        hours = seconds / 3600
+        return f"{hours:.1f} 小时"
+    elif seconds >= 60:
+        minutes = seconds / 60
+        return f"{minutes:.1f} 分钟"
+    else:
+        return f"{seconds:.1f} 秒"
+
+
+def format_number(num: int) -> str:
+    """格式化数字，添加千位分隔符"""
+    return f"{num:,}"
+
+
 class HardwareInfoCard(StyledGroupBox):
     """硬件信息卡片"""
 
@@ -312,21 +332,180 @@ class HardwareInfoDialog(QDialog):
 
         try:
             info_lines.append("<h2>CPU 处理器信息</h2>")
+
+            # 基本信息
+            info_lines.append("<h3>基本信息</h3>")
             info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
 
-            if cpu_info.get('processor'):
-                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>处理器型号</b></td><td>{cpu_info['processor']}</td></tr>")
+            if cpu_info.get('model_name'):
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>处理器型号</b></td><td>{cpu_info['model_name']}</td></tr>")
+            elif cpu_info.get('processor'):
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>处理器</b></td><td>{cpu_info['processor']}</td></tr>")
 
+            if cpu_info.get('manufacturer'):
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>制造商</b></td><td>{cpu_info['manufacturer']}</td></tr>")
+
+            if cpu_info.get('hardware'):
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>硬件</b></td><td>{cpu_info['hardware']}</td></tr>")
+
+            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>架构</b></td><td>{cpu_info.get('architecture', 'N/A')}</td></tr>")
             info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>物理核心数</b></td><td>{cpu_info.get('physical_cores', 'N/A')}</td></tr>")
             info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>逻辑核心数</b></td><td>{cpu_info.get('logical_cores', 'N/A')}</td></tr>")
 
-            if cpu_info.get('frequency'):
-                freq = cpu_info['frequency']
-                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>当前频率</b></td><td>{format_frequency(freq.get('current', 0))}</td></tr>")
-                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>最大频率</b></td><td>{format_frequency(freq.get('max', 0))}</td></tr>")
-                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>最小频率</b></td><td>{format_frequency(freq.get('min', 0))}</td></tr>")
+            # Windows 特有信息
+            if cpu_info.get('number_of_cores'):
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>物理核心 (WMI)</b></td><td>{cpu_info['number_of_cores']}</td></tr>")
+            if cpu_info.get('number_of_logical_processors'):
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>逻辑处理器 (WMI)</b></td><td>{cpu_info['number_of_logical_processors']}</td></tr>")
 
             info_lines.append("</table>")
+
+            # 频率信息
+            if cpu_info.get('frequency'):
+                info_lines.append("<h3>频率信息</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                freq = cpu_info['frequency']
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>当前频率</b></td><td>{format_frequency(freq.get('current', 0))}</td></tr>")
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>最大频率</b></td><td>{format_frequency(freq.get('max', 0))}</td></tr>")
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>最小频率</b></td><td>{format_frequency(freq.get('min', 0))}</td></tr>")
+                info_lines.append("</table>")
+
+            # Windows 频率信息
+            if cpu_info.get('max_clock_speed'):
+                info_lines.append("<h3>时钟频率 (WMI)</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>最大时钟频率</b></td><td>{cpu_info['max_clock_speed']} MHz</td></tr>")
+                if cpu_info.get('current_clock_speed'):
+                    info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>当前时钟频率</b></td><td>{cpu_info['current_clock_speed']} MHz</td></tr>")
+                info_lines.append("</table>")
+
+            # CPU 使用率
+            if cpu_info.get('cpu_percent') is not None:
+                info_lines.append("<h3>CPU 使用率</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                percent = cpu_info['cpu_percent']
+                color = "red" if percent > 80 else "orange" if percent > 60 else "green"
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>总体使用率</b></td><td style='color: {color}; font-weight: bold;'>{percent:.1f}%</td></tr>")
+                info_lines.append("</table>")
+
+            # 每个核心的使用率
+            if cpu_info.get('per_cpu_percent'):
+                info_lines.append("<h3>各核心使用率</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                info_lines.append("<tr><th style='background-color: #f0f0f0;'>核心</th><th style='background-color: #f0f0f0;'>使用率</th><th style='background-color: #f0f0f0;'>状态</th></tr>")
+
+                for idx, core_percent in enumerate(cpu_info['per_cpu_percent']):
+                    color = "red" if core_percent > 80 else "orange" if core_percent > 60 else "green"
+                    status = "高负载" if core_percent > 80 else "中等" if core_percent > 50 else "正常"
+                    info_lines.append(f"<tr><td>核心 {idx}</td><td style='color: {color}; font-weight: bold;'>{core_percent:.1f}%</td><td>{status}</td></tr>")
+
+                info_lines.append("</table>")
+
+            # CPU 时间信息
+            if cpu_info.get('times'):
+                info_lines.append("<h3>CPU 时间分布</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                times = cpu_info['times']
+                total_time = sum(times.values())
+
+                for key, value in times.items():
+                    percentage = (value / total_time * 100) if total_time > 0 else 0
+                    label_map = {
+                        'user': '用户空间',
+                        'system': '内核空间',
+                        'idle': '空闲',
+                        'nice': '优先级调整',
+                        'iowait': 'IO等待',
+                        'irq': '硬中断',
+                        'softirq': '软中断',
+                        'steal': '被窃取',
+                        'guest': '虚拟机'
+                    }
+                    label = label_map.get(key, key)
+                    info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>{label}</b></td><td>{format_seconds(value)}</td><td>{percentage:.1f}%</td></tr>")
+
+                info_lines.append("</table>")
+
+            # 每个核心的时间信息
+            if cpu_info.get('per_cpu_times'):
+                info_lines.append("<h3>各核心时间分布</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                info_lines.append("<tr><th style='background-color: #f0f0f0;'>核心</th><th style='background-color: #f0f0f0;'>用户</th><th style='background-color: #f0f0f0;'>系统</th><th style='background-color: #f0f0f0;'>空闲</th></tr>")
+
+                for idx, times in enumerate(cpu_info['per_cpu_times']):
+                    user_pct = (times['user'] / sum(times.values()) * 100) if times else 0
+                    sys_pct = (times['system'] / sum(times.values()) * 100) if times else 0
+                    idle_pct = (times['idle'] / sum(times.values()) * 100) if times else 0
+
+                    info_lines.append(f"<tr><td>核心 {idx}</td><td>{user_pct:.1f}%</td><td>{sys_pct:.1f}%</td><td>{idle_pct:.1f}%</td></tr>")
+
+                info_lines.append("</table>")
+
+            # CPU 统计信息
+            if cpu_info.get('stats'):
+                info_lines.append("<h3>CPU 统计</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                stats = cpu_info['stats']
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>上下文切换</b></td><td>{format_number(stats.get('ctx_switches', 0))}</td></tr>")
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>中断</b></td><td>{format_number(stats.get('interrupts', 0))}</td></tr>")
+                if stats.get('soft_interrupts'):
+                    info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>软中断</b></td><td>{format_number(stats['soft_interrupts'])}</td></tr>")
+                if stats.get('syscalls'):
+                    info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>系统调用</b></td><td>{format_number(stats['syscalls'])}</td></tr>")
+                info_lines.append("</table>")
+
+            # 缓存信息
+            if cpu_info.get('cache_info'):
+                info_lines.append("<h3>缓存信息</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                cache = cpu_info['cache_info']
+                for key, value in cache.items():
+                    info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>{key}</b></td><td>{value}</td></tr>")
+                info_lines.append("</table>")
+
+            # Windows 缓存信息
+            if cpu_info.get('l2_cache_size') or cpu_info.get('l3_cache_size'):
+                info_lines.append("<h3>缓存信息 (WMI)</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                if cpu_info.get('l2_cache_size'):
+                    info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>L2 缓存</b></td><td>{cpu_info['l2_cache_size']}</td></tr>")
+                if cpu_info.get('l3_cache_size'):
+                    info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>L3 缓存</b></td><td>{cpu_info['l3_cache_size']}</td></tr>")
+                info_lines.append("</table>")
+
+            # CPU 特性
+            if cpu_info.get('flags'):
+                info_lines.append("<h3>CPU 特性</h3>")
+                flags = cpu_info['flags']
+                # 显示前 30 个特性
+                info_lines.append(f"<p>{', '.join(flags[:30])}")
+                if len(flags) > 30:
+                    info_lines.append(f"<p style='color: #666;'>... 还有 {len(flags) - 30} 个特性</p>")
+
+            # 虚拟化支持
+            if cpu_info.get('virtualization') is not None:
+                info_lines.append("<h3>虚拟化</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                virt_status = "支持" if cpu_info['virtualization'] else "不支持"
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>硬件虚拟化</b></td><td>{virt_status}</td></tr>")
+                info_lines.append("</table>")
+
+            # 系统负载
+            if cpu_info.get('load_average'):
+                info_lines.append("<h3>系统负载均衡</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                load = cpu_info['load_average']
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>1分钟平均负载</b></td><td>{load['1min']:.2f}</td></tr>")
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>5分钟平均负载</b></td><td>{load['5min']:.2f}</td></tr>")
+                info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>15分钟平均负载</b></td><td>{load['15min']:.2f}</td></tr>")
+                info_lines.append("</table>")
+
+            # 主机名
+            if cpu_info.get('hostname'):
+                info_lines.append("<h3>系统信息</h3>")
+                info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>主机名</b></td><td>{cpu_info['hostname']}</td></tr>")
+                info_lines.append("</table>")
 
         except Exception as e:
             info_lines.append(f"<p style='color: red;'>显示CPU信息时出错: {e}</p>")

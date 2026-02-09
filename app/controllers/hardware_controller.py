@@ -9,6 +9,7 @@ import psutil
 import platform
 import subprocess
 import re
+import os
 from typing import Dict, List
 from PySide6.QtCore import QObject, Signal
 
@@ -50,6 +51,8 @@ class HardwareController(QObject):
                 'physical_cores': psutil.cpu_count(logical=False),
                 'logical_cores': psutil.cpu_count(logical=True),
                 'processor': platform.processor(),
+                'architecture': platform.machine() if hasattr(platform, 'machine') else 'Unknown',
+                'hostname': platform.node(),
             }
 
             # CPU频率信息
@@ -60,6 +63,162 @@ class HardwareController(QObject):
                         'current': cpu_freq.current,
                         'min': cpu_freq.min,
                         'max': cpu_freq.max
+                    }
+            except:
+                pass
+
+            # 每个核心的使用率（百分比）
+            try:
+                cpu_info['per_cpu_percent'] = psutil.cpu_percent(interval=0.1, percpu=True)
+            except:
+                cpu_info['per_cpu_percent'] = []
+
+            # 总体CPU使用率
+            try:
+                cpu_info['cpu_percent'] = psutil.cpu_percent(interval=0.1)
+            except:
+                cpu_info['cpu_percent'] = 0
+
+            # CPU统计信息（上下文切换、中断、系统调用等）
+            try:
+                cpu_stats = psutil.cpu_stats()
+                cpu_info['stats'] = {
+                    'ctx_switches': cpu_stats.ctx_switches,
+                    'interrupts': cpu_stats.interrupts,
+                    'soft_interrupts': cpu_stats.soft_interrupts,
+                    'syscalls': cpu_stats.syscalls
+                }
+            except:
+                pass
+
+            # CPU时间信息（用户、系统、空闲等）
+            try:
+                cpu_times = psutil.cpu_times()
+                cpu_info['times'] = {
+                    'user': cpu_times.user,
+                    'system': cpu_times.system,
+                    'idle': cpu_times.idle
+                }
+                if hasattr(cpu_times, 'nice'):
+                    cpu_info['times']['nice'] = cpu_times.nice
+                if hasattr(cpu_times, 'iowait'):
+                    cpu_info['times']['iowait'] = cpu_times.iowait
+                if hasattr(cpu_times, 'irq'):
+                    cpu_info['times']['irq'] = cpu_times.irq
+                if hasattr(cpu_times, 'softirq'):
+                    cpu_info['times']['softirq'] = cpu_times.softirq
+                if hasattr(cpu_times, 'steal'):
+                    cpu_info['times']['steal'] = cpu_times.steal
+                if hasattr(cpu_times, 'guest'):
+                    cpu_info['times']['guest'] = cpu_times.guest
+            except:
+                pass
+
+            # 每个核心的时间信息
+            try:
+                cpu_times_percpu = psutil.cpu_times(percpu=True)
+                cpu_info['per_cpu_times'] = []
+                for times in cpu_times_percpu:
+                    core_time = {
+                        'user': times.user,
+                        'system': times.system,
+                        'idle': times.idle
+                    }
+                    if hasattr(times, 'nice'):
+                        core_time['nice'] = times.nice
+                    if hasattr(times, 'iowait'):
+                        core_time['iowait'] = times.iowait
+                    if hasattr(times, 'irq'):
+                        core_time['irq'] = times.irq
+                    if hasattr(times, 'softirq'):
+                        core_time['softirq'] = times.softirq
+                    cpu_info['per_cpu_times'].append(core_time)
+            except:
+                pass
+
+            # 获取CPU缓存信息（仅Linux）
+            try:
+                if platform.system() == 'Linux':
+                    import os
+                    cache_info = {}
+                    # L1缓存
+                    for cache_type in ['dcache', 'icache']:
+                        cache_path = f'/sys/devices/system/cpu/cpu0/cache/index0/{cache_type}'
+                        if os.path.exists(cache_path):
+                            try:
+                                with open(cache_path, 'r') as f:
+                                    cache_info[cache_type] = f.read().strip()
+                            except:
+                                pass
+
+                    # 尝试读取缓存大小
+                    for level in [0, 1, 2, 3]:
+                        size_path = f'/sys/devices/system/cpu/cpu0/cache/index{level}/size'
+                        if os.path.exists(size_path):
+                            try:
+                                with open(size_path, 'r') as f:
+                                    cache_info[f'L{level}_cache'] = f.read().strip()
+                            except:
+                                pass
+
+                    if cache_info:
+                        cpu_info['cache_info'] = cache_info
+            except:
+                pass
+
+            # 获取CPU型号和特性
+            try:
+                if platform.system() == 'Linux':
+                    # 读取 /proc/cpuinfo
+                    try:
+                        with open('/proc/cpuinfo', 'r') as f:
+                            cpuinfo_content = f.read()
+
+                        # 提取CPU型号
+                        for line in cpuinfo_content.split('\n'):
+                            if line.startswith('model name'):
+                                cpu_info['model_name'] = line.split(':', 1)[1].strip()
+                                break
+                            elif line.startswith('Hardware'):
+                                cpu_info['hardware'] = line.split(':', 1)[1].strip()
+
+                        # 提取CPU特性
+                        for line in cpuinfo_content.split('\n'):
+                            if line.startswith('flags') or line.startswith('Features'):
+                                flags = line.split(':', 1)[1].strip()
+                                cpu_info['flags'] = flags.split()
+                                break
+                    except:
+                        pass
+                elif platform.system() == 'Windows':
+                    # 使用 WMI 获取更详细的CPU信息
+                    try:
+                        import wmi
+                        c = wmi.WMI()
+                        for cpu in c.Win32_Processor():
+                            cpu_info['model_name'] = cpu.Name
+                            cpu_info['manufacturer'] = cpu.Manufacturer
+                            cpu_info['max_clock_speed'] = cpu.MaxClockSpeed
+                            cpu_info['current_clock_speed'] = cpu.CurrentClockSpeed
+                            cpu_info['number_of_cores'] = cpu.NumberOfCores
+                            cpu_info['number_of_logical_processors'] = cpu.NumberOfLogicalProcessors
+                            cpu_info['l2_cache_size'] = getattr(cpu, 'L2CacheSize', None)
+                            cpu_info['l3_cache_size'] = getattr(cpu, 'L3CacheSize', None)
+                            cpu_info['virtualization'] = getattr(cpu, 'VirtualizationFirmwareEnabled', False)
+                            break
+                    except:
+                        pass
+            except:
+                pass
+
+            # 获取CPU负载（1分钟、5分钟、15分钟）
+            try:
+                if hasattr(os, 'getloadavg'):
+                    load1, load5, load15 = os.getloadavg()
+                    cpu_info['load_average'] = {
+                        '1min': load1,
+                        '5min': load5,
+                        '15min': load15
                     }
             except:
                 pass

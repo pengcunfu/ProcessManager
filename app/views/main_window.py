@@ -88,11 +88,27 @@ class SystemMonitorInterface(QWidget):
         self.overview_card = SystemOverviewCard()
         layout.addWidget(self.overview_card)
 
+        # 温度监控卡片
+        self.temperature_card = TemperatureMonitorCard()
+        layout.addWidget(self.temperature_card)
+
+        # 电池监控卡片
+        self.battery_card = BatteryMonitorCard()
+        layout.addWidget(self.battery_card)
+
         layout.addStretch()
 
     def update_system_info(self, system_info):
         """更新系统监控信息"""
         self.overview_card.update_system_info(system_info)
+
+    def update_temperature(self, temp_info):
+        """更新温度信息"""
+        self.temperature_card.update_temperature(temp_info)
+
+    def update_battery(self, battery_info):
+        """更新电池信息"""
+        self.battery_card.update_battery(battery_info)
 
 
 class ProcessInterface(QWidget):
@@ -180,21 +196,17 @@ class AdvancedMonitorInterface(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        # 温度监控卡片
-        self.temperature_card = TemperatureMonitorCard()
-        layout.addWidget(self.temperature_card)
+        # 高级监控页面预留，未来可以添加更多高级功能
+        # 目前已将温度监控和电池监控移至系统监控页面
 
-        # 电池监控卡片
-        self.battery_card = BatteryMonitorCard()
-        layout.addWidget(self.battery_card)
+        # 添加一个提示标签
+        from PySide6.QtWidgets import QLabel
+        info_label = QLabel("高级监控功能\n\n温度监控和电池监控已移至\"系统监控\"页面")
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        info_label.setStyleSheet("color: #666; font-size: 14px; padding: 50px;")
+        layout.addWidget(info_label)
 
-    def update_temperature(self, temp_info):
-        """更新温度信息"""
-        self.temperature_card.update_temperature(temp_info)
-
-    def update_battery(self, battery_info):
-        """更新电池信息"""
-        self.battery_card.update_battery(battery_info)
+        layout.addStretch()
 
 
 class ServicesInterface(QWidget):
@@ -360,8 +372,8 @@ class MainWindow(QMainWindow):
 
         self.traffic_interface.process_traffic_card.refresh_requested.connect(self.refresh_process_traffic)
 
-        self.advanced_interface.temperature_card.refresh_requested.connect(self.refresh_temperature)
-        self.advanced_interface.battery_card.refresh_requested.connect(self.refresh_battery)
+        self.system_monitor_interface.temperature_card.refresh_requested.connect(self.refresh_temperature)
+        self.system_monitor_interface.battery_card.refresh_requested.connect(self.refresh_battery)
         self.services_interface.services_card.refresh_requested.connect(self.refresh_services)
     
     def start_monitoring(self):
@@ -467,11 +479,11 @@ class MainWindow(QMainWindow):
     # 高级监控信号处理
     def on_temperature_updated(self, temp_info):
         """温度信息更新"""
-        self.advanced_interface.update_temperature(temp_info)
+        self.system_monitor_interface.update_temperature(temp_info)
 
     def on_battery_updated(self, battery_info):
         """电池信息更新"""
-        self.advanced_interface.update_battery(battery_info)
+        self.system_monitor_interface.update_battery(battery_info)
 
     def on_services_updated(self, services):
         """服务列表更新"""
@@ -504,16 +516,18 @@ class MainWindow(QMainWindow):
     
     def show_about(self):
         """显示关于对话框"""
-        about_text = f"""系统监控与进程管理工具 v3.1
+        about_text = f"""系统监控与进程管理工具 v3.2
 
 基于PySide6开发的现代化系统监控工具
 
 功能特性:
-• 实时系统资源监控
+• 系统信息查看（详细系统配置）
+• 系统监控（CPU、内存、磁盘、温度、电池）
 • 进程管理和监控
 • 网络连接监控
 • 网络流量监控（实时速度+进程流量）
 • 硬件信息查看
+• 系统服务管理
 • MVC架构设计
 
 系统信息:

@@ -330,30 +330,217 @@ class HardwareController(QObject):
                     handle = pynvml.nvmlDeviceGetHandleByIndex(i)
                     name = pynvml.nvmlDeviceGetName(handle)
                     memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                    temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
-                    fan_speed = pynvml.nvmlDeviceGetFanSpeed(handle)
-                    power_usage = pynvml.nvmlDeviceGetPowerUsage(handle)
-                    power_limit = pynvml.nvmlDeviceGetPowerManagementLimit(handle)
 
-                    # 获取驱动版本
-                    try:
-                        driver_version = pynvml.nvmlSystemGetDriverVersion()
-                    except:
-                        driver_version = "Unknown"
-
+                    # 基本信息
                     gpu_info = {
                         'name': name.decode('utf-8') if isinstance(name, bytes) else name,
                         'type': 'NVIDIA',
+                        'index': i,
                         'memory_total': memory_info.total,
                         'memory_used': memory_info.used,
                         'memory_free': memory_info.free,
-                        'temperature': temp,
-                        'fan_speed': fan_speed,
-                        'power_usage': power_usage / 1000,  # 转换为瓦特
-                        'power_limit': power_limit / 1000,   # 转换为瓦特
-                        'driver_version': driver_version,
-                        'index': i
+                        'memory_percent': (memory_info.used / memory_info.total * 100) if memory_info.total > 0 else 0,
                     }
+
+                    # 温度信息
+                    try:
+                        temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+                        gpu_info['temperature'] = temp
+                        # 温度阈值
+                        try:
+                            temp_threshold = pynvml.nvmlDeviceGetTemperatureThreshold(handle, pynvml.NVML_TEMPERATURE_THRESHOLD_GPU_MAX)
+                            gpu_info['temperature_threshold'] = temp_threshold
+                        except:
+                            pass
+                        # 温度慢降和关机阈值
+                        try:
+                            gpu_info['temp_slowdown'] = pynvml.nvmlDeviceGetTemperatureThreshold(handle, pynvml.NVML_TEMPERATURE_THRESHOLD_SLOWDOWN)
+                            gpu_info['temp_shutdown'] = pynvml.nvmlDeviceGetTemperatureThreshold(handle, pynvml.NVML_TEMPERATURE_THRESHOLD_SHUTDOWN)
+                        except:
+                            pass
+                    except:
+                        pass
+
+                    # 风扇信息
+                    try:
+                        fan_speed = pynvml.nvmlDeviceGetFanSpeed(handle)
+                        gpu_info['fan_speed'] = fan_speed
+                    except:
+                        pass
+
+                    # 功耗信息
+                    try:
+                        power_usage = pynvml.nvmlDeviceGetPowerUsage(handle)
+                        power_limit = pynvml.nvmlDeviceGetPowerManagementLimit(handle)
+                        gpu_info['power_usage'] = power_usage / 1000  # 转换为瓦特
+                        gpu_info['power_limit'] = power_limit / 1000   # 转换为瓦特
+                        gpu_info['power_percent'] = (power_usage / power_limit * 100) if power_limit > 0 else 0
+
+                        # 获取功耗限制范围
+                        try:
+                            min_power = pynvml.nvmlDeviceGetPowerManagementLimitConstraints(handle)[0]
+                            max_power = pynvml.nvmlDeviceGetPowerManagementLimitConstraints(handle)[1]
+                            gpu_info['power_min_limit'] = min_power / 1000
+                            gpu_info['power_max_limit'] = max_power / 1000
+                        except:
+                            pass
+                    except:
+                        pass
+
+                    # 驱动和CUDA版本
+                    try:
+                        driver_version = pynvml.nvmlSystemGetDriverVersion()
+                        gpu_info['driver_version'] = driver_version
+                    except:
+                        gpu_info['driver_version'] = "Unknown"
+
+                    try:
+                        cuda_version = pynvml.nvmlSystemGetCudaDriverVersion()
+                        gpu_info['cuda_version'] = f"{cuda_version // 1000}.{(cuda_version % 1000) // 10}"
+                    except:
+                        pass
+
+                    # GPU 利用率
+                    try:
+                        utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
+                        gpu_info['gpu_utilization'] = utilization.gpu
+                        gpu_info['memory_utilization'] = utilization.memory
+                    except:
+                        pass
+
+                    # 时钟频率
+                    try:
+                        graphics_clock = pynvml.nvmlDeviceGetClockInfo(handle, pynvml.NVML_CLOCK_GRAPHICS)
+                        gpu_info['graphics_clock'] = graphics_clock
+                    except:
+                        pass
+
+                    try:
+                        sm_clock = pynvml.nvmlDeviceGetClockInfo(handle, pynvml.NVML_CLOCK_SM)
+                        gpu_info['sm_clock'] = sm_clock
+                    except:
+                        pass
+
+                    try:
+                        mem_clock = pynvml.nvmlDeviceGetClockInfo(handle, pynvml.NVML_CLOCK_MEM)
+                        gpu_info['memory_clock'] = mem_clock
+                    except:
+                        pass
+
+                    # 最大时钟频率
+                    try:
+                        max_graphics_clock = pynvml.nvmlDeviceGetMaxClockInfo(handle, pynvml.NVML_CLOCK_GRAPHICS)
+                        gpu_info['max_graphics_clock'] = max_graphics_clock
+                    except:
+                        pass
+
+                    try:
+                        max_mem_clock = pynvml.nvmlDeviceGetMaxClockInfo(handle, pynvml.NVML_CLOCK_MEM)
+                        gpu_info['max_memory_clock'] = max_mem_clock
+                    except:
+                        pass
+
+                    # PCIe 信息
+                    try:
+                        pcie = pynvml.nvmlDeviceGetPcieThroughput(handle)
+                        gpu_info['pcie_throughput_rx'] = pcie.rx_kb * 1024  # 转换为字节
+                        gpu_info['pcie_throughput_tx'] = pcie.tx_kb * 1024
+                    except:
+                        pass
+
+                    try:
+                        pcie_gen = pynvml.nvmlDeviceGetCurrPcieLinkGeneration(handle)
+                        pcie_width = pynvml.nvmlDeviceGetCurrPcieLinkWidth(handle)
+                        gpu_info['pcie_gen'] = pcie_gen
+                        gpu_info['pcie_width'] = pcie_width
+                    except:
+                        pass
+
+                    # 最大 PCIe
+                    try:
+                        max_pcie_gen = pynvml.nvmlDeviceGetMaxPcieLinkGeneration(handle)
+                        max_pcie_width = pynvml.nvmlDeviceGetMaxPcieLinkWidth(handle)
+                        gpu_info['max_pcie_gen'] = max_pcie_gen
+                        gpu_info['max_pcie_width'] = max_pcie_width
+                    except:
+                        pass
+
+                    # GPU 架构信息
+                    try:
+                        major, minor = pynvml.nvmlDeviceGetCudaComputeCapability(handle)
+                        gpu_info['compute_capability'] = f"{major}.{minor}"
+                    except:
+                        pass
+
+                    # 总线类型
+                    try:
+                        bus_type = pynvml.nvmlDeviceGetCurrPcieLinkGeneration(handle)
+                        gpu_info['bus_type'] = f"PCIe Gen {bus_type}" if bus_type else "PCIe"
+                    except:
+                        gpu_info['bus_type'] = "PCIe"
+
+                    # 串号和UUID
+                    try:
+                        serial = pynvml.nvmlDeviceGetSerial(handle).decode('utf-8')
+                        gpu_info['serial_number'] = serial
+                    except:
+                        pass
+
+                    try:
+                        uuid = pynvml.nvmlDeviceGetUUID(handle).decode('utf-8')
+                        gpu_info['uuid'] = uuid
+                    except:
+                        pass
+
+                    # VBIOS 版本
+                    try:
+                        vbios_version = pynvml.nvmlDeviceGetVbiosVersion(handle).decode('utf-8')
+                        gpu_info['vbios_version'] = vbios_version
+                    except:
+                        pass
+
+                    # 显示模式
+                    try:
+                        display_mode = pynvml.nvmlDeviceGetDisplayMode(handle)
+                        gpu_info['display_mode'] = "Enabled" if display_mode == pynvml.NVML_FEATURE_ENABLED else "Disabled"
+                    except:
+                        pass
+
+                    # 持久化模式
+                    try:
+                        persistence_mode = pynvml.nvmlDeviceGetPersistenceMode(handle)
+                        gpu_info['persistence_mode'] = "Enabled" if persistence_mode == pynvml.NVML_FEATURE_ENABLED else "Disabled"
+                    except:
+                        pass
+
+                    # ECC 模式
+                    try:
+                        ecc_mode = pynvml.nvmlDeviceGetAccountingPids(handle)
+                        gpu_info['ecc_enabled'] = True
+                    except:
+                        gpu_info['ecc_enabled'] = False
+
+                    # MIG 模式（Multi-Instance GPU）
+                    try:
+                        mig_mode = pynvml.nvmlDeviceGetMigMode(handle)
+                        gpu_info['mig_mode'] = mig_mode
+                    except:
+                        pass
+
+                    # 性能状态
+                    try:
+                        pstate = pynvml.nvmlDeviceGetPerformanceState(handle)
+                        gpu_info['performance_state'] = f"P{pstate}"
+                    except:
+                        pass
+
+                    # 正在运行的进程
+                    try:
+                        procs = pynvml.nvmlDeviceGetComputeRunningProcesses(handle)
+                        gpu_info['running_processes'] = len(procs)
+                    except:
+                        pass
+
                     gpus.append(gpu_info)
 
                 pynvml.nvmlShutdown()
@@ -374,10 +561,12 @@ class HardwareController(QObject):
                             'memory_total': gpu.memoryTotal * 1024 * 1024,  # 转换为字节
                             'memory_used': gpu.memoryUsed * 1024 * 1024,
                             'memory_free': gpu.memoryFree * 1024 * 1024,
+                            'memory_percent': (gpu.memoryUsed / gpu.memoryTotal * 100) if gpu.memoryTotal > 0 else 0,
                             'temperature': gpu.temperature,
                             'fan_speed': getattr(gpu, 'fan', None),  # 可能不可用
                             'load': gpu.load * 100,
-                            'driver_version': 'Unknown'
+                            'driver_version': 'Unknown',
+                            'uuid': f"GPU-{len(gpus)}",
                         }
                         gpus.append(gpu_info)
                 except ImportError:
@@ -390,14 +579,47 @@ class HardwareController(QObject):
                 try:
                     import wmi
                     c = wmi.WMI()
-                    for gpu in c.Win32_VideoController():
+                    for idx, gpu in enumerate(c.Win32_VideoController()):
                         gpu_info = {
                             'name': gpu.Name,
                             'type': 'Display Adapter',
                             'memory_total': getattr(gpu, 'AdapterRAM', 0) or 0,
                             'driver_version': getattr(gpu, 'DriverVersion', 'Unknown'),
                             'driver_date': getattr(gpu, 'DriverDate', 'Unknown'),
+                            'index': idx,
                         }
+
+                        # 额外的 WMI 信息
+                        if hasattr(gpu, 'InstallDate'):
+                            gpu_info['install_date'] = str(gpu.InstallDate)[:8] if gpu.InstallDate else 'Unknown'
+
+                        if hasattr(gpu, 'VideoProcessor'):
+                            gpu_info['video_processor'] = gpu.VideoProcessor
+
+                        if hasattr(gpu, 'VideoArchitecture'):
+                            arch_map = {1: 'Other', 2: 'Unknown', 3: 'ISA', 4: 'EISA', 5: 'PCI', 6: 'AGP', 7: 'PCMCIA', 8: 'PCIe'}
+                            gpu_info['video_architecture'] = arch_map.get(gpu.VideoArchitecture, str(gpu.VideoArchitecture))
+
+                        if hasattr(gpu, 'VideoMemoryType'):
+                            gpu_info['memory_type'] = gpu.VideoMemoryType
+
+                        # 显示器信息
+                        if hasattr(gpu, 'CurrentNumberOfColors'):
+                            gpu_info['color_depth'] = gpu.CurrentNumberOfColors
+
+                        if hasattr(gpu, 'CurrentRefreshRate'):
+                            gpu_info['refresh_rate'] = gpu.CurrentRefreshRate
+
+                        if hasattr(gpu, 'CurrentHorizontalResolution'):
+                            gpu_info['resolution'] = f"{gpu.CurrentHorizontalResolution}x{gpu.CurrentVerticalResolution}"
+
+                        # DAC 类型
+                        if hasattr(gpu, 'AdapterType'):
+                            gpu_info['adapter_type'] = gpu.AdapterType
+
+                        if hasattr(gpu, 'Caption'):
+                            gpu_info['caption'] = gpu.Caption
+
                         gpus.append(gpu_info)
                 except ImportError:
                     pass

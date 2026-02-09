@@ -617,30 +617,239 @@ class HardwareInfoDialog(QDialog):
                         continue
 
                     info_lines.append(f"<h3>显卡 {idx}</h3>")
+
+                    # 基本信息
+                    info_lines.append("<h4>基本信息</h4>")
                     info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
                     info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>显卡名称</b></td><td>{gpu.get('name', 'N/A')}</td></tr>")
                     info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>类型</b></td><td>{gpu.get('type', 'N/A')}</td></tr>")
 
-                    if gpu.get('memory_total'):
-                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>显存总量</b></td><td>{format_bytes(gpu.get('memory_total', 0))}</td></tr>")
-                    if gpu.get('memory_used'):
-                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>已使用显存</b></td><td>{format_bytes(gpu.get('memory_used', 0))}</td></tr>")
-                    if gpu.get('memory_free'):
-                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>可用显存</b></td><td>{format_bytes(gpu.get('memory_free', 0))}</td></tr>")
-                    if gpu.get('temperature'):
-                        temp = gpu.get('temperature', 0)
-                        temp_color = "red" if temp > 80 else "orange" if temp > 70 else "green"
-                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>温度</b></td><td style='color: {temp_color}; font-weight: bold;'>{temp}°C</td></tr>")
-                    if gpu.get('fan_speed'):
-                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>风扇转速</b></td><td>{gpu.get('fan_speed', 0)}%</td></tr>")
-                    if gpu.get('power_usage'):
-                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>当前功耗</b></td><td>{gpu.get('power_usage', 0):.1f}W / {gpu.get('power_limit', 0):.1f}W</td></tr>")
-                    if gpu.get('load'):
-                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>负载</b></td><td>{gpu.get('load', 0):.1f}%</td></tr>")
-                    if gpu.get('driver_version'):
-                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>驱动版本</b></td><td>{gpu.get('driver_version', 'N/A')}</td></tr>")
+                    if gpu.get('index') is not None:
+                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>GPU 索引</b></td><td>{gpu['index']}</td></tr>")
 
-                    info_lines.append("</table><br>")
+                    if gpu.get('uuid'):
+                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>UUID</b></td><td style='font-family: monospace; font-size: 11px;'>{gpu['uuid']}</td></tr>")
+
+                    if gpu.get('serial_number'):
+                        info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>序列号</b></td><td style='font-family: monospace;'>{gpu['serial_number']}</td></tr>")
+
+                    info_lines.append("</table>")
+
+                    # 显存信息
+                    if gpu.get('memory_total'):
+                        info_lines.append("<h4>显存信息</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                        info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>显存总量</b></td><td>{format_bytes(gpu.get('memory_total', 0))}</td></tr>")
+
+                        if gpu.get('memory_used'):
+                            mem_used = gpu['memory_used']
+                            mem_total = gpu['memory_total']
+                            mem_percent = (mem_used / mem_total * 100) if mem_total > 0 else 0
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>已使用显存</b></td><td>{format_bytes(mem_used)} ({mem_percent:.1f}%)</td></tr>")
+
+                        if gpu.get('memory_free'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>可用显存</b></td><td>{format_bytes(gpu['memory_free'])}</td></tr>")
+
+                        if gpu.get('memory_utilization'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>显存利用率</b></td><td>{gpu['memory_utilization']}%</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    # 温度和风扇
+                    if gpu.get('temperature') or gpu.get('fan_speed'):
+                        info_lines.append("<h4>温度与散热</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+
+                        if gpu.get('temperature'):
+                            temp = gpu['temperature']
+                            temp_color = "red" if temp > 80 else "orange" if temp > 70 else "green"
+                            info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>当前温度</b></td><td style='color: {temp_color}; font-weight: bold;'>{temp}°C</td></tr>")
+
+                        if gpu.get('temperature_threshold'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>温度阈值</b></td><td>{gpu['temperature_threshold']}°C</td></tr>")
+
+                        if gpu.get('temp_slowdown'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>降频温度</b></td><td style='color: orange;'>{gpu['temp_slowdown']}°C</td></tr>")
+
+                        if gpu.get('temp_shutdown'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>关机温度</b></td><td style='color: red;'>{gpu['temp_shutdown']}°C</td></tr>")
+
+                        if gpu.get('fan_speed'):
+                            fan = gpu['fan_speed']
+                            fan_color = "red" if fan > 90 else "orange" if fan > 70 else "green"
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>风扇转速</b></td><td style='color: {fan_color}; font-weight: bold;'>{fan}%</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    # 功耗信息
+                    if gpu.get('power_usage'):
+                        info_lines.append("<h4>功耗信息</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                        power = gpu['power_usage']
+                        power_limit = gpu.get('power_limit', 0)
+                        power_percent = gpu.get('power_percent', 0)
+
+                        power_color = "red" if power_percent > 90 else "orange" if power_percent > 75 else "green"
+                        info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>当前功耗</b></td><td style='color: {power_color}; font-weight: bold;'>{power:.1f}W ({power_percent:.1f}%)</td></tr>")
+
+                        if power_limit:
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>功耗上限</b></td><td>{power_limit:.1f}W</td></tr>")
+
+                        if gpu.get('power_min_limit') and gpu.get('power_max_limit'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>功耗范围</b></td><td>{gpu['power_min_limit']:.0f}W - {gpu['power_max_limit']:.0f}W</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    # GPU 利用率
+                    if gpu.get('gpu_utilization') or gpu.get('load'):
+                        info_lines.append("<h4>GPU 利用率</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+
+                        if gpu.get('gpu_utilization'):
+                            util = gpu['gpu_utilization']
+                            util_color = "red" if util > 90 else "orange" if util > 75 else "green"
+                            info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>GPU 利用率</b></td><td style='color: {util_color}; font-weight: bold;'>{util}%</td></tr>")
+                        elif gpu.get('load'):
+                            load = gpu['load']
+                            load_color = "red" if load > 90 else "orange" if load > 75 else "green"
+                            info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>负载</b></td><td style='color: {load_color}; font-weight: bold;'>{load:.1f}%</td></tr>")
+
+                        if gpu.get('running_processes'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>运行进程数</b></td><td>{gpu['running_processes']}</td></tr>")
+
+                        if gpu.get('performance_state'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>性能状态</b></td><td>{gpu['performance_state']}</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    # 时钟频率
+                    if gpu.get('graphics_clock') or gpu.get('memory_clock'):
+                        info_lines.append("<h4>时钟频率</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+
+                        if gpu.get('graphics_clock'):
+                            info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>图形时钟</b></td><td>{gpu['graphics_clock']} MHz</td></tr>")
+
+                        if gpu.get('max_graphics_clock'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>最大图形时钟</b></td><td>{gpu['max_graphics_clock']} MHz</td></tr>")
+
+                        if gpu.get('sm_clock'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>SM 时钟</b></td><td>{gpu['sm_clock']} MHz</td></tr>")
+
+                        if gpu.get('memory_clock'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>显存时钟</b></td><td>{gpu['memory_clock']} MHz</td></tr>")
+
+                        if gpu.get('max_memory_clock'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>最大显存时钟</b></td><td>{gpu['max_memory_clock']} MHz</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    # PCIe 信息
+                    if gpu.get('pcie_gen') or gpu.get('pcie_width'):
+                        info_lines.append("<h4>PCIe 总线</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+
+                        if gpu.get('bus_type'):
+                            info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>总线类型</b></td><td>{gpu['bus_type']}</td></tr>")
+
+                        if gpu.get('pcie_gen'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>当前 PCIe 代数</b></td><td>Gen {gpu['pcie_gen']}</td></tr>")
+
+                        if gpu.get('pcie_width'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>当前 PCIe 带宽</b></td><td>x{gpu['pcie_width']}</td></tr>")
+
+                        if gpu.get('max_pcie_gen') or gpu.get('max_pcie_width'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>最大 PCIe 规格</b></td><td>Gen {gpu.get('max_pcie_gen', 'N/A')} x{gpu.get('max_pcie_width', 'N/A')}</td></tr>")
+
+                        if gpu.get('pcie_throughput_rx') and gpu.get('pcie_throughput_tx'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>PCIe 吞吐量</b></td><td>↓{format_bytes(gpu['pcie_throughput_rx'])}/s ↑{format_bytes(gpu['pcie_throughput_tx'])}/s</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    # 驱动和固件信息
+                    if gpu.get('driver_version') or gpu.get('vbios_version') or gpu.get('cuda_version'):
+                        info_lines.append("<h4>驱动与固件</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+
+                        if gpu.get('driver_version'):
+                            info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>驱动版本</b></td><td>{gpu['driver_version']}</td></tr>")
+
+                        if gpu.get('cuda_version'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>CUDA 版本</b></td><td>{gpu['cuda_version']}</td></tr>")
+
+                        if gpu.get('vbios_version'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>VBIOS 版本</b></td><td>{gpu['vbios_version']}</td></tr>")
+
+                        if gpu.get('driver_date'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>驱动日期</b></td><td>{gpu['driver_date']}</td></tr>")
+
+                        if gpu.get('install_date'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>安装日期</b></td><td>{gpu['install_date']}</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    # 计算能力
+                    if gpu.get('compute_capability'):
+                        info_lines.append("<h4>计算能力</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+                        info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>计算能力</b></td><td>{gpu['compute_capability']}</td></tr>")
+                        info_lines.append("</table>")
+
+                    # 显示模式
+                    if gpu.get('display_mode') or gpu.get('persistence_mode') or gpu.get('ecc_enabled'):
+                        info_lines.append("<h4>模式与特性</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+
+                        if gpu.get('display_mode'):
+                            display_color = "green" if gpu['display_mode'] == "Enabled" else "#666"
+                            info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>显示模式</b></td><td style='color: {display_color};'>{gpu['display_mode']}</td></tr>")
+
+                        if gpu.get('persistence_mode'):
+                            persistence_color = "green" if gpu['persistence_mode'] == "Enabled" else "#666"
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>持久化模式</b></td><td style='color: {persistence_color};'>{gpu['persistence_mode']}</td></tr>")
+
+                        if gpu.get('ecc_enabled') is not None:
+                            ecc_status = "启用" if gpu['ecc_enabled'] else "禁用"
+                            ecc_color = "green" if gpu['ecc_enabled'] else "#666"
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>ECC 内存</b></td><td style='color: {ecc_color};'>{ecc_status}</td></tr>")
+
+                        if gpu.get('mig_mode'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>MIG 模式</b></td><td>{gpu['mig_mode']}</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    # Windows 额外信息
+                    if gpu.get('video_processor') or gpu.get('video_architecture') or gpu.get('memory_type'):
+                        info_lines.append("<h4>其他信息</h4>")
+                        info_lines.append("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+
+                        if gpu.get('video_processor'):
+                            info_lines.append(f"<tr><td style='width: 30%; background-color: #f0f0f0;'><b>视频处理器</b></td><td>{gpu['video_processor']}</td></tr>")
+
+                        if gpu.get('video_architecture'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>架构</b></td><td>{gpu['video_architecture']}</td></tr>")
+
+                        if gpu.get('memory_type'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>内存类型</b></td><td>{gpu['memory_type']}</td></tr>")
+
+                        if gpu.get('adapter_type'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>适配器类型</b></td><td>{gpu['adapter_type']}</td></tr>")
+
+                        if gpu.get('resolution'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>分辨率</b></td><td>{gpu['resolution']}</td></tr>")
+
+                        if gpu.get('refresh_rate'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>刷新率</b></td><td>{gpu['refresh_rate']} Hz</td></tr>")
+
+                        if gpu.get('color_depth'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>色深</b></td><td>{gpu['color_depth']}</td></tr>")
+
+                        if gpu.get('caption'):
+                            info_lines.append(f"<tr><td style='background-color: #f0f0f0;'><b>描述</b></td><td>{gpu['caption']}</td></tr>")
+
+                        info_lines.append("</table>")
+
+                    info_lines.append("<br>")
 
         except Exception as e:
             info_lines.append(f"<p style='color: red;'>显示显卡信息时出错: {e}</p>")

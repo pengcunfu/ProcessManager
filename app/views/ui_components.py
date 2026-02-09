@@ -17,11 +17,12 @@ from PySide6.QtGui import QFont, QBrush
 
 from app.models import SystemInfo, ProcessInfo, NetworkConnection, format_bytes, format_frequency
 from app.controllers.traffic_controller import ProcessTrafficInfo
+from app.views.ui_utils import StyledTableWidget, StyledButton, StyledGroupBox
 
 
-class SystemOverviewCard(QGroupBox):
+class SystemOverviewCard(StyledGroupBox):
     """系统概览卡片"""
-    
+
     def __init__(self, parent=None):
         super().__init__("系统概览", parent)
         self.setFixedHeight(180)
@@ -86,9 +87,9 @@ class SystemOverviewCard(QGroupBox):
         self.disk_progress.setValue(disk_percent)
 
 
-class SystemStatsCard(QGroupBox):
+class SystemStatsCard(StyledGroupBox):
     """系统统计卡片"""
-    
+
     def __init__(self, parent=None):
         super().__init__("系统统计", parent)
         self.setFixedHeight(100)
@@ -122,13 +123,13 @@ class SystemStatsCard(QGroupBox):
         self.cpu_count_label.setText(f"CPU核心: {info.cpu_count}")
 
 
-class ProcessTableCard(QGroupBox):
+class ProcessTableCard(StyledGroupBox):
     """进程表格卡片"""
-    
+
     # 信号定义
     refresh_requested = Signal()
     kill_requested = Signal(int, bool)  # pid, force
-    
+
     def __init__(self, parent=None):
         super().__init__("进程管理", parent)
         self.current_processes = []
@@ -155,18 +156,18 @@ class ProcessTableCard(QGroupBox):
         self.sort_combo.setFixedWidth(120)
         self.sort_combo.currentTextChanged.connect(self._on_sort_changed)
         control_layout.addWidget(self.sort_combo)
-        
+
         control_layout.addStretch()
-        
+
         # 刷新按钮
-        refresh_btn = QPushButton("刷新")
+        refresh_btn = StyledButton("刷新", StyledButton.PRIMARY)
         refresh_btn.clicked.connect(self.refresh_requested.emit)
         control_layout.addWidget(refresh_btn)
         
         layout.addLayout(control_layout)
-        
+
         # 进程表格
-        self.table = QTableWidget()
+        self.table = StyledTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
             "PID", "进程名", "CPU%", "内存%", "内存(MB)", "状态"
@@ -194,17 +195,15 @@ class ProcessTableCard(QGroupBox):
         # 操作按钮栏
         button_layout = QHBoxLayout()
         
-        self.kill_btn = QPushButton("结束进程")
+        self.kill_btn = StyledButton("结束进程", StyledButton.PRIMARY)
         self.kill_btn.clicked.connect(self._on_kill_clicked)
         self.kill_btn.setEnabled(False)
-        
-        self.force_kill_btn = QPushButton("强制结束")
-        self.force_kill_btn.setObjectName("dangerButton")
+
+        self.force_kill_btn = StyledButton("强制结束", StyledButton.DANGER)
         self.force_kill_btn.clicked.connect(self._on_force_kill_clicked)
         self.force_kill_btn.setEnabled(False)
-        
-        self.details_btn = QPushButton("详细信息")
-        self.details_btn.setObjectName("secondaryButton")
+
+        self.details_btn = StyledButton("详细信息", StyledButton.PRIMARY)
         self.details_btn.clicked.connect(self._on_details_clicked)
         self.details_btn.setEnabled(False)
         
@@ -327,11 +326,11 @@ CPU使用率: {process.cpu_percent:.1f}%
         QMessageBox.information(self, "进程详情", details)
 
 
-class NetworkTableCard(QGroupBox):
+class NetworkTableCard(StyledGroupBox):
     """网络连接表格卡片"""
-    
+
     refresh_requested = Signal()
-    
+
     def __init__(self, parent=None):
         super().__init__("网络连接", parent)
         self.current_connections = []
@@ -359,18 +358,18 @@ class NetworkTableCard(QGroupBox):
         self.status_combo.setFixedWidth(120)
         self.status_combo.currentTextChanged.connect(self._on_filter_changed)
         control_layout.addWidget(self.status_combo)
-        
+
         control_layout.addStretch()
-        
+
         # 刷新按钮
-        refresh_btn = QPushButton("刷新")
+        refresh_btn = StyledButton("刷新", StyledButton.PRIMARY)
         refresh_btn.clicked.connect(self.refresh_requested.emit)
         control_layout.addWidget(refresh_btn)
         
         layout.addLayout(control_layout)
-        
+
         # 网络连接表格
-        self.table = QTableWidget()
+        self.table = StyledTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels([
             "协议", "本地地址", "远程地址", "状态", "PID"
@@ -435,7 +434,7 @@ class NetworkTableCard(QGroupBox):
         self._apply_filters()
 
 
-class HardwareInfoCard(QGroupBox):
+class HardwareInfoCard(StyledGroupBox):
     """硬件信息卡片"""
 
     refresh_requested = Signal()
@@ -452,10 +451,10 @@ class HardwareInfoCard(QGroupBox):
         # 刷新按钮
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        detail_btn = QPushButton("查看详情")
+        detail_btn = StyledButton("查看详情", StyledButton.PRIMARY)
         detail_btn.clicked.connect(self.detail_requested.emit)
         button_layout.addWidget(detail_btn)
-        refresh_btn = QPushButton("刷新")
+        refresh_btn = StyledButton("刷新", StyledButton.PRIMARY)
         refresh_btn.clicked.connect(self.refresh_requested.emit)
         button_layout.addWidget(refresh_btn)
         layout.addLayout(button_layout)
@@ -536,11 +535,11 @@ class HardwareInfoCard(QGroupBox):
         self.info_text.setPlainText("\n".join(info_lines))
 
 
-class TrafficMonitorCard(QGroupBox):
+class TrafficMonitorCard(StyledGroupBox):
     """网络流量监控卡片"""
-    
+
     refresh_requested = Signal()
-    
+
     def __init__(self, parent=None):
         super().__init__("实时流量监控", parent)
         self.setFixedHeight(220)
@@ -625,11 +624,11 @@ class TrafficMonitorCard(QGroupBox):
         self.packets_recv.setText(f"{packets_recv:,}")
 
 
-class ProcessTrafficCard(QGroupBox):
+class ProcessTrafficCard(StyledGroupBox):
     """进程流量统计卡片"""
-    
+
     refresh_requested = Signal()
-    
+
     def __init__(self, parent=None):
         super().__init__("进程流量统计", parent)
         self.current_traffic = []
@@ -646,16 +645,16 @@ class ProcessTrafficCard(QGroupBox):
         control_layout.addWidget(info_label)
         
         control_layout.addStretch()
-        
+
         # 刷新按钮
-        refresh_btn = QPushButton("刷新")
+        refresh_btn = StyledButton("刷新", StyledButton.PRIMARY)
         refresh_btn.clicked.connect(self.refresh_requested.emit)
         control_layout.addWidget(refresh_btn)
-        
+
         layout.addLayout(control_layout)
-        
+
         # 进程流量表格
-        self.table = QTableWidget()
+        self.table = StyledTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels([
             "PID", "进程名", "连接数", "读取", "写入"
@@ -730,11 +729,11 @@ class HardwareInfoDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        refresh_btn = QPushButton("刷新")
+        refresh_btn = StyledButton("刷新", StyledButton.PRIMARY)
         refresh_btn.clicked.connect(self.refresh_info)
         button_layout.addWidget(refresh_btn)
 
-        close_btn = QPushButton("关闭")
+        close_btn = StyledButton("关闭", StyledButton.PRIMARY)
         close_btn.clicked.connect(self.accept)
         button_layout.addWidget(close_btn)
 
@@ -892,7 +891,7 @@ class HardwareInfoDialog(QDialog):
         pass
 
 
-class TemperatureMonitorCard(QGroupBox):
+class TemperatureMonitorCard(StyledGroupBox):
     """温度监控卡片"""
 
     refresh_requested = Signal()
@@ -908,7 +907,7 @@ class TemperatureMonitorCard(QGroupBox):
         # 按钮布局
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        refresh_btn = QPushButton("刷新")
+        refresh_btn = StyledButton("刷新", StyledButton.PRIMARY)
         refresh_btn.clicked.connect(self.refresh_requested.emit)
         button_layout.addWidget(refresh_btn)
         layout.addLayout(button_layout)
@@ -965,7 +964,7 @@ class TemperatureMonitorCard(QGroupBox):
             self.info_text.setHtml(f"<p style='color: red;'>显示温度信息时出错: {e}</p>")
 
 
-class BatteryMonitorCard(QGroupBox):
+class BatteryMonitorCard(StyledGroupBox):
     """电池监控卡片"""
 
     refresh_requested = Signal()
@@ -981,7 +980,7 @@ class BatteryMonitorCard(QGroupBox):
         # 按钮布局
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        refresh_btn = QPushButton("刷新")
+        refresh_btn = StyledButton("刷新", StyledButton.PRIMARY)
         refresh_btn.clicked.connect(self.refresh_requested.emit)
         button_layout.addWidget(refresh_btn)
         layout.addLayout(button_layout)
@@ -1035,7 +1034,7 @@ class BatteryMonitorCard(QGroupBox):
             self.info_label.setText(f"<p style='color: red;'>显示电池信息时出错: {e}</p>")
 
 
-class ServicesMonitorCard(QGroupBox):
+class ServicesMonitorCard(StyledGroupBox):
     """系统服务监控卡片"""
 
     refresh_requested = Signal()
@@ -1051,13 +1050,13 @@ class ServicesMonitorCard(QGroupBox):
         # 按钮布局
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        refresh_btn = QPushButton("刷新")
+        refresh_btn = StyledButton("刷新", StyledButton.PRIMARY)
         refresh_btn.clicked.connect(self.refresh_requested.emit)
         button_layout.addWidget(refresh_btn)
         layout.addLayout(button_layout)
 
         # 服务表格
-        self.table = QTableWidget()
+        self.table = StyledTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["服务名称", "显示名称", "状态"])
         self.table.horizontalHeader().setStretchLastSection(True)

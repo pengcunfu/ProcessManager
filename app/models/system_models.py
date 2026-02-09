@@ -34,6 +34,15 @@ class SystemInfo:
     version: str = ""
     machine: str = ""
     processor: str = ""
+    # Python环境信息
+    python_version: str = ""
+    python_build: str = ""
+    python_compiler: str = ""
+    # 详细系统信息
+    architecture: str = ""
+    hostname: str = ""
+    # 用户信息
+    username: str = ""
 
 
 @dataclass

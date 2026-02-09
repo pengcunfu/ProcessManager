@@ -134,38 +134,76 @@ class SystemInfoCard(StyledGroupBox):
         """初始化界面"""
         layout = QGridLayout(self)
 
+        row = 0
+
         # 操作系统
         self.system_label = QLabel("操作系统: --")
-        layout.addWidget(self.system_label, 0, 0)
+        layout.addWidget(self.system_label, row, 0)
 
         # 节点名
         self.node_label = QLabel("节点名: --")
-        layout.addWidget(self.node_label, 0, 1)
+        layout.addWidget(self.node_label, row, 1)
+        row += 1
 
         # 发行版本
         self.release_label = QLabel("发行版本: --")
-        layout.addWidget(self.release_label, 1, 0)
+        layout.addWidget(self.release_label, row, 0)
 
         # 版本号
         self.version_label = QLabel("版本号: --")
-        layout.addWidget(self.version_label, 1, 1)
+        layout.addWidget(self.version_label, row, 1)
+        row += 1
 
         # 架构
         self.machine_label = QLabel("架构: --")
-        layout.addWidget(self.machine_label, 2, 0)
+        layout.addWidget(self.machine_label, row, 0)
 
         # 处理器
         self.processor_label = QLabel("处理器: --")
-        layout.addWidget(self.processor_label, 2, 1)
+        layout.addWidget(self.processor_label, row, 1)
+        row += 1
+
+        # 主机名
+        self.hostname_label = QLabel("主机名: --")
+        layout.addWidget(self.hostname_label, row, 0)
+
+        # 当前用户
+        self.username_label = QLabel("当前用户: --")
+        layout.addWidget(self.username_label, row, 1)
+        row += 1
+
+        # Python版本
+        self.python_version_label = QLabel("Python版本: --")
+        layout.addWidget(self.python_version_label, row, 0)
+
+        # Python编译器
+        self.python_compiler_label = QLabel("Python编译器: --")
+        layout.addWidget(self.python_compiler_label, row, 1)
+        row += 1
+
+        # Python构建信息
+        self.python_build_label = QLabel("Python构建: --")
+        layout.addWidget(self.python_build_label, row, 0, 1, 2)
 
     def update_system_info(self, info: SystemInfo):
         """更新系统信息"""
         self.system_label.setText(f"操作系统: {info.system or 'N/A'}")
         self.node_label.setText(f"节点名: {info.node or 'N/A'}")
         self.release_label.setText(f"发行版本: {info.release or 'N/A'}")
-        self.version_label.setText(f"版本号: {info.version or 'N/A'}")
+
+        # 版本号可能很长，截断显示
+        version = info.version or 'N/A'
+        if len(version) > 50:
+            version = version[:47] + "..."
+        self.version_label.setText(f"版本号: {version}")
+
         self.machine_label.setText(f"架构: {info.machine or 'N/A'}")
         self.processor_label.setText(f"处理器: {info.processor or 'N/A'}")
+        self.hostname_label.setText(f"主机名: {info.hostname or 'N/A'}")
+        self.username_label.setText(f"当前用户: {info.username or 'N/A'}")
+        self.python_version_label.setText(f"Python版本: {info.python_version or 'N/A'}")
+        self.python_compiler_label.setText(f"Python编译器: {info.python_compiler or 'N/A'}")
+        self.python_build_label.setText(f"Python构建: {info.python_build or 'N/A'}")
 
 
 class ProcessTableCard(StyledGroupBox):

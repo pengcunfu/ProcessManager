@@ -44,22 +44,18 @@ from app.views.ui_utils import (
 
 class SystemInfoInterface(QWidget):
     """系统信息界面"""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.init_ui()
-    
+
     def init_ui(self):
         """初始化界面"""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        # 系统概览卡片
-        self.overview_card = SystemOverviewCard()
-        layout.addWidget(self.overview_card)
-
-        # 系统信息卡片
+        # 系统信息卡片（详细的静态信息）
         self.system_info_card = SystemInfoCard()
         layout.addWidget(self.system_info_card)
 
@@ -71,9 +67,32 @@ class SystemInfoInterface(QWidget):
 
     def update_system_info(self, system_info):
         """更新系统信息"""
-        self.overview_card.update_system_info(system_info)
         self.system_info_card.update_system_info(system_info)
         self.stats_card.update_system_info(system_info)
+
+
+class SystemMonitorInterface(QWidget):
+    """系统监控界面（实时监控）"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+
+    def init_ui(self):
+        """初始化界面"""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        # 系统概览卡片（实时监控）
+        self.overview_card = SystemOverviewCard()
+        layout.addWidget(self.overview_card)
+
+        layout.addStretch()
+
+    def update_system_info(self, system_info):
+        """更新系统监控信息"""
+        self.overview_card.update_system_info(system_info)
 
 
 class ProcessInterface(QWidget):
@@ -249,7 +268,8 @@ class MainWindow(QMainWindow):
         self.tab_widget = QTabWidget()
         
         # 创建各个界面
-        self.system_interface = SystemInfoInterface()
+        self.system_info_interface = SystemInfoInterface()
+        self.system_monitor_interface = SystemMonitorInterface()
         self.process_interface = ProcessInterface()
         self.network_interface = NetworkInterface()
         self.traffic_interface = TrafficInterface()
@@ -257,7 +277,8 @@ class MainWindow(QMainWindow):
         self.services_interface = ServicesInterface()
 
         # 添加标签页
-        self.tab_widget.addTab(self.system_interface, "系统信息")
+        self.tab_widget.addTab(self.system_info_interface, "系统信息")
+        self.tab_widget.addTab(self.system_monitor_interface, "系统监控")
         self.tab_widget.addTab(self.process_interface, "进程管理")
         self.tab_widget.addTab(self.network_interface, "网络监控")
         self.tab_widget.addTab(self.traffic_interface, "流量监控")
@@ -420,7 +441,8 @@ class MainWindow(QMainWindow):
     
     def on_system_info_updated(self, system_info):
         """系统信息更新"""
-        self.system_interface.update_system_info(system_info)
+        self.system_info_interface.update_system_info(system_info)
+        self.system_monitor_interface.update_system_info(system_info)
     
     def on_processes_updated(self, processes):
         """进程列表更新"""

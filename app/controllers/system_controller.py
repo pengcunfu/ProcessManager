@@ -97,6 +97,16 @@ class SystemMonitorController(QObject):
             machine = platform.machine()
             processor = platform.processor()
 
+            # Python环境信息
+            python_version = platform.python_version()
+            python_build = f"{platform.python_build()[0]} [{platform.python_build()[1]}]"
+            python_compiler = platform.python_compiler()
+
+            # 详细系统信息
+            architecture = f"{platform.architecture()[0]} ({platform.architecture()[1]})"
+            hostname = platform.node()
+            username = platform.username() if hasattr(platform, 'username') else 'Unknown'
+
             # 创建系统信息对象
             system_info = SystemInfo(
                 cpu_percent=cpu_percent,
@@ -119,7 +129,13 @@ class SystemMonitorController(QObject):
                 release=release,
                 version=version,
                 machine=machine,
-                processor=processor
+                processor=processor,
+                python_version=python_version,
+                python_build=python_build,
+                python_compiler=python_compiler,
+                architecture=architecture,
+                hostname=hostname,
+                username=username
             )
             
             self.system_info_updated.emit(system_info)

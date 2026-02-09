@@ -163,10 +163,6 @@ class AdvancedMonitorInterface(QWidget):
         self.battery_card = BatteryMonitorCard()
         layout.addWidget(self.battery_card)
 
-        # 系统服务监控卡片
-        self.services_card = ServicesMonitorCard()
-        layout.addWidget(self.services_card)
-
     def update_temperature(self, temp_info):
         """更新温度信息"""
         self.temperature_card.update_temperature(temp_info)
@@ -174,6 +170,23 @@ class AdvancedMonitorInterface(QWidget):
     def update_battery(self, battery_info):
         """更新电池信息"""
         self.battery_card.update_battery(battery_info)
+
+
+class ServicesInterface(QWidget):
+    """系统服务管理界面"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+
+    def init_ui(self):
+        """初始化界面"""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # 系统服务监控卡片
+        self.services_card = ServicesMonitorCard()
+        layout.addWidget(self.services_card)
 
     def update_services(self, services):
         """更新服务列表"""
@@ -235,6 +248,7 @@ class MainWindow(QMainWindow):
         self.network_interface = NetworkInterface()
         self.traffic_interface = TrafficInterface()
         self.advanced_interface = AdvancedMonitorInterface()
+        self.services_interface = ServicesInterface()
 
         # 添加标签页
         self.tab_widget.addTab(self.system_interface, "系统信息")
@@ -242,6 +256,7 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(self.network_interface, "网络监控")
         self.tab_widget.addTab(self.traffic_interface, "流量监控")
         self.tab_widget.addTab(self.advanced_interface, "高级监控")
+        self.tab_widget.addTab(self.services_interface, "系统服务")
         
         layout.addWidget(self.tab_widget)
         
@@ -320,7 +335,7 @@ class MainWindow(QMainWindow):
 
         self.advanced_interface.temperature_card.refresh_requested.connect(self.refresh_temperature)
         self.advanced_interface.battery_card.refresh_requested.connect(self.refresh_battery)
-        self.advanced_interface.services_card.refresh_requested.connect(self.refresh_services)
+        self.services_interface.services_card.refresh_requested.connect(self.refresh_services)
     
     def start_monitoring(self):
         """开始监控"""
@@ -432,7 +447,7 @@ class MainWindow(QMainWindow):
 
     def on_services_updated(self, services):
         """服务列表更新"""
-        self.advanced_interface.update_services(services)
+        self.services_interface.update_services(services)
 
     def refresh_temperature(self):
         """刷新温度信息"""
